@@ -67,7 +67,10 @@ export class Spinner {
 export function printAnalysisResults(
   result: AnalysisResult,
   maxDepth: number | null = null,
-  format: string = 'tree'
+  format: string = 'tree',
+  compact: boolean = false,
+  maxNodes: number | null = null,
+  groupByFile: boolean = true
 ): void {
   const { changedFiles, changedFunctions, callGraph } = result;
 
@@ -92,7 +95,7 @@ export function printAnalysisResults(
   switch (format.toLowerCase()) {
     case 'tree':
     default:
-      printTreeFormat(changedFunctions, callGraph, maxDepth);
+      printTreeFormat(changedFunctions, callGraph, maxDepth, compact, maxNodes, groupByFile);
       break;
     case 'list':
       printListFormat(changedFunctions, callGraph, maxDepth);
@@ -100,9 +103,11 @@ export function printAnalysisResults(
     case 'json':
       printJsonFormat(result, maxDepth);
       break;
-    case 'summary':
-      printSummaryFormat(changedFunctions, callGraph);
-      break;
+  }
+  
+  // Always append summary for non-JSON formats
+  if (format.toLowerCase() !== 'json') {
+    printSummarySection(changedFunctions, callGraph);
   }
 }
 
@@ -112,7 +117,10 @@ export function printAnalysisResults(
 function printTreeFormat(
   changedFunctions: Map<string, Set<string>>,
   callGraph: any,
-  maxDepth: number | null
+  maxDepth: number | null,
+  compact: boolean = false,
+  maxNodes: number | null = null,
+  groupByFile: boolean = true
 ): void {
   const colors = {
     reset: '\x1b[0m',
@@ -123,6 +131,12 @@ function printTreeFormat(
     magenta: '\x1b[35m',
   };
 
+  // Global visited tracker to avoid duplicate expansions across the entire analysis
+  const globalVisited = new Set<string>();
+  
+  // Node counter for limiting tree size
+  const nodeCounter = { count: 0 };
+  
   const printImpactTree = (
     calleeId: string,
     prefix: string,
@@ -135,13 +149,18 @@ function printTreeFormat(
       maxDepth,
       visitedPath,
       currentDepth,
-      prefix
+      prefix,
+      globalVisited,
+      nodeCounter,
+      maxNodes,
+      compact,
+      groupByFile
     );
     lines.forEach((line) => {
       // Apply colors to the output
       const coloredLine = line
         .replace(
-          /^(\s*[├└]──\s+)([^(]+)(\s+in\s+)([^(]+)(\s+\(line[^)]*\))$/,
+          /^(\s*[├└]──\s+)([^(]+)(\s+in\s+)([^(]+)(\s+\(lines?[^)]*\))$/,
           `$1${colors.bright}$2${colors.reset}$3${colors.cyan}$4${colors.reset}${colors.dim}$5${colors.reset}`
         )
         .replace(
@@ -151,6 +170,18 @@ function printTreeFormat(
         .replace(
           /\(Circular reference to ([^)]+)\)/,
           `${colors.dim}(Circular reference to $1)${colors.reset}`
+        )
+        .replace(
+          /\(Reference to ([^)]+) - ([^)]+)\)/,
+          `${colors.dim}(Reference to $1 - $2)${colors.reset}`
+        )
+        .replace(
+          /\(Node limit reached - ([^)]+)\)/,
+          `${colors.dim}(Node limit reached - $1)${colors.reset}`
+        )
+        .replace(
+          /\(\.\.\.\s+and\s+([^)]+)\)/,
+          `${colors.dim}(... and $1)${colors.reset}`
         );
       console.log(coloredLine);
     });
@@ -170,6 +201,16 @@ function printTreeFormat(
   console.log(
     `\n💥 ${colors.bright}Dependency Walker Analysis${colors.reset} 💥`
   );
+  
+  // Show active features
+  const features = [];
+  if (compact) features.push('Compact mode');
+  if (maxNodes) features.push(`Max ${maxNodes} nodes`);
+  if (maxDepth) features.push(`Max depth ${maxDepth}`);
+  if (groupByFile) features.push('File grouping');
+  if (features.length > 0) {
+    console.log(`${colors.dim}[${features.join(', ')}]${colors.reset}`);
+  }
 
   for (const [filePath, functionIds] of changedFunctions.entries()) {
     console.log(
@@ -281,13 +322,13 @@ function printJsonFormat(result: AnalysisResult, maxDepth: number | null): void 
 }
 
 /**
- * Summary format (high-level overview)
+ * Summary section (appended to all non-JSON formats)
  */
-function printSummaryFormat(
+function printSummarySection(
   changedFunctions: Map<string, Set<string>>,
   callGraph: any
 ): void {
-  console.log('\n📊 Impact Summary:\n');
+  console.log('\n\n📊 Impact Summary:\n');
   
   const totalChanged = Array.from(changedFunctions.values())
     .reduce((total, funcSet) => total + funcSet.size, 0);

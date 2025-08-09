@@ -355,15 +355,58 @@ export function findChangedFunctions(
   return changedFunctionsByFile;
 }
 
+// Helper interface for grouped callers
+interface GroupedCaller {
+  file: string;
+  functions: Array<{ callerId: string; functionName: string; line: number }>;
+}
+
+// Function to group callers by file
+function groupCallersByFile(callers: CallSite[]): GroupedCaller[] {
+  const fileGroups = new Map<string, Array<{ callerId: string; functionName: string; line: number }>>();
+  
+  for (const caller of callers) {
+    const parts = caller.callerId.split(':');
+    const file = parts[0] || 'unknown';
+    const functionName = parts[1] || 'unknown';
+    
+    if (!fileGroups.has(file)) {
+      fileGroups.set(file, []);
+    }
+    
+    fileGroups.get(file)!.push({
+      callerId: caller.callerId,
+      functionName,
+      line: caller.line
+    });
+  }
+  
+  return Array.from(fileGroups.entries()).map(([file, functions]) => ({
+    file,
+    functions: functions.sort((a, b) => a.line - b.line) // Sort by line number
+  }));
+}
+
 export function generateImpactTree(
   calleeId: string,
   callGraph: CallGraph,
   maxDepth: number | null = null,
   visitedPath: Set<string> = new Set(),
   currentDepth = 0,
-  prefix = ''
+  prefix = '',
+  globalVisited: Set<string> = new Set(),
+  nodeCounter: { count: number } = { count: 0 },
+  maxNodes: number | null = null,
+  compact: boolean = false,
+  groupByFile: boolean = true
 ): string[] {
   const lines: string[] = [];
+
+  // Check node limit
+  if (maxNodes !== null && nodeCounter.count >= maxNodes) {
+    lines.push(`${prefix}└── (Node limit reached - ${maxNodes} nodes)`);
+    return lines;
+  }
 
   if (maxDepth !== null && currentDepth >= maxDepth) {
     lines.push(`${prefix}└── (Max depth reached)`);
@@ -377,36 +420,156 @@ export function generateImpactTree(
     return lines;
   }
 
+  // In compact mode or if already visited, show reference instead of full expansion
+  if ((compact || globalVisited.has(calleeId)) && currentDepth > 0) {
+    const parts = calleeId.split(':');
+    const funcName = parts[1] || 'unknown';
+    const callerCount = callGraph.get(calleeId)?.callers?.length || 0;
+    lines.push(`${prefix}└── (Reference to ${funcName} - ${callerCount} caller${callerCount !== 1 ? 's' : ''})`);
+    nodeCounter.count++;
+    return lines;
+  }
+
   visitedPath.add(calleeId);
+  globalVisited.add(calleeId);
+  nodeCounter.count++;
 
   const calleeNode = callGraph.get(calleeId);
   const callers = calleeNode?.callers ?? [];
 
-  callers.forEach((callSite, index) => {
-    const { callerId, line } = callSite;
-    const callerParts = callerId.split(':');
-    const callerFile = callerParts[0] || 'unknown';
-    const callerFunc = callerParts[1] || 'unknown';
-    const isLast = index === callers.length - 1;
-    const connector = isLast ? '└──' : '├──';
-    const newPrefix = prefix + (isLast ? '    ' : '│   ');
+  if (groupByFile && callers.length > 0) {
+    // Group callers by file
+    const groupedCallers = groupCallersByFile(callers);
+    
+    // In compact mode, limit the number of file groups shown
+    const displayGroups = compact && groupedCallers.length > 3 ? groupedCallers.slice(0, 3) : groupedCallers;
+    const hiddenGroupCount = groupedCallers.length - displayGroups.length;
+    const hiddenCallersInGroups = hiddenGroupCount > 0 
+      ? groupedCallers.slice(3).reduce((sum, group) => sum + group.functions.length, 0) 
+      : 0;
 
-    lines.push(
-      `${prefix}${connector} ${callerFunc} in ${truncatePath(
-        callerFile
-      )} (line ~${line})`
-    );
-    lines.push(
-      ...generateImpactTree(
-        callerId,
-        callGraph,
-        maxDepth,
-        visitedPath,
-        currentDepth + 1,
-        newPrefix
-      )
-    );
-  });
+    displayGroups.forEach((group, groupIndex) => {
+      const isLastGroup = groupIndex === displayGroups.length - 1 && hiddenGroupCount === 0;
+      const groupConnector = isLastGroup ? '└──' : '├──';
+      const groupPrefix = prefix + (isLastGroup ? '    ' : '│   ');
+      
+      if (group.functions.length === 1) {
+        // Single function in file - show normally
+        const func = group.functions[0];
+        if (func) {
+          lines.push(
+            `${prefix}${groupConnector} ${func.functionName} in ${truncatePath(
+              group.file
+            )} (line ~${func.line})`
+          );
+          lines.push(
+            ...generateImpactTree(
+              func.callerId,
+              callGraph,
+              maxDepth,
+              visitedPath,
+              currentDepth + 1,
+              groupPrefix,
+              globalVisited,
+              nodeCounter,
+              maxNodes,
+              compact,
+              groupByFile
+            )
+          );
+        }
+      } else {
+        // Multiple functions in same file - group them
+        const funcNames = group.functions.map(f => f.functionName).join(', ');
+        const lineNumbers = group.functions.map(f => f.line).sort((a, b) => a - b);
+        const lineInfo = lineNumbers.length > 1 
+          ? `lines ~${lineNumbers.join(', ')}`
+          : `line ~${lineNumbers[0] || '?'}`;
+        
+        lines.push(
+          `${prefix}${groupConnector} ${funcNames} in ${truncatePath(
+            group.file
+          )} (${lineInfo})`
+        );
+        
+        // For grouped functions, we need to traverse all their dependencies
+        // but we'll show them as a consolidated branch
+        const consolidatedLines: string[] = [];
+        const groupGlobalVisited = new Set(globalVisited);
+        
+        for (const func of group.functions) {
+          const funcLines = generateImpactTree(
+            func.callerId,
+            callGraph,
+            maxDepth,
+            new Set(visitedPath),
+            currentDepth + 1,
+            '',
+            groupGlobalVisited,
+            nodeCounter,
+            maxNodes,
+            compact,
+            groupByFile
+          );
+          consolidatedLines.push(...funcLines);
+        }
+        
+        // Remove duplicates and apply prefix
+        const uniqueLines = [...new Set(consolidatedLines)]
+          .filter(line => line.trim().length > 0)
+          .map(line => `${groupPrefix}${line}`);
+          
+        lines.push(...uniqueLines);
+      }
+    });
+    
+    // Show summary for hidden file groups
+    if (hiddenGroupCount > 0) {
+      lines.push(
+        `${prefix}└── (... and ${hiddenCallersInGroups} more caller${hiddenCallersInGroups !== 1 ? 's' : ''} in ${hiddenGroupCount} file${hiddenGroupCount !== 1 ? 's' : ''})`
+      );
+    }
+  } else {
+    // Fall back to original behavior if not grouping by file
+    const displayCallers = compact && callers.length > 5 ? callers.slice(0, 5) : callers;
+    const hiddenCount = callers.length - displayCallers.length;
+
+    displayCallers.forEach((callSite, index) => {
+      const { callerId, line } = callSite;
+      const callerParts = callerId.split(':');
+      const callerFile = callerParts[0] || 'unknown';
+      const callerFunc = callerParts[1] || 'unknown';
+      const isLast = index === displayCallers.length - 1 && hiddenCount === 0;
+      const connector = isLast ? '└──' : '├──';
+      const newPrefix = prefix + (isLast ? '    ' : '│   ');
+
+      lines.push(
+        `${prefix}${connector} ${callerFunc} in ${truncatePath(
+          callerFile
+        )} (line ~${line})`
+      );
+      lines.push(
+        ...generateImpactTree(
+          callerId,
+          callGraph,
+          maxDepth,
+          visitedPath,
+          currentDepth + 1,
+          newPrefix,
+          globalVisited,
+          nodeCounter,
+          maxNodes,
+          compact,
+          groupByFile
+        )
+      );
+    });
+
+    // Show summary for hidden callers
+    if (hiddenCount > 0) {
+      lines.push(`${prefix}└── (... and ${hiddenCount} more caller${hiddenCount !== 1 ? 's' : ''})`);
+    }
+  }
 
   visitedPath.delete(calleeId);
   return lines;

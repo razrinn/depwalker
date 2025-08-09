@@ -77,7 +77,10 @@ function performAnalysis(
 function analyzeProject(
   maxDepth: number | null = null,
   tsConfigPath: string = './tsconfig.json',
-  format: string = 'tree'
+  format: string = 'tree',
+  compact: boolean = false,
+  maxNodes: number | null = null,
+  groupByFile: boolean = true
 ): void {
   let spinner: Spinner | undefined;
 
@@ -106,7 +109,7 @@ function analyzeProject(
     console.log();
 
     // Print results
-    printAnalysisResults(result, maxDepth, format);
+    printAnalysisResults(result, maxDepth, format, compact, maxNodes, groupByFile);
   } catch (error) {
     if (spinner) {
       spinner.fail('Analysis failed');
@@ -141,11 +144,37 @@ cli
   )
   .option(
     '-f, --format <type>',
-    'Output format: tree (default), list, json, summary',
+    'Output format: tree (default), list, json (summary appended to all formats)',
     'tree'
   )
+  .option(
+    '-c, --compact',
+    'Enable compact mode: reduces duplicate references and limits callers per function'
+  )
+  .option(
+    '--max-nodes <number>',
+    'Maximum total nodes to display in entire tree (prevents overly large outputs)',
+    (value) => {
+      const parsed = parseInt(value, 10);
+      if (isNaN(parsed) || parsed < 1) {
+        throw new Error('Max nodes must be a positive number');
+      }
+      return parsed;
+    }
+  )
+  .option(
+    '--no-file-grouping',
+    'Disable grouping multiple functions from same file (shows each function separately)'
+  )
   .action((options) => {
-    analyzeProject(options.depth || null, options.tsconfig, options.format);
+    analyzeProject(
+      options.depth || null, 
+      options.tsconfig, 
+      options.format,
+      options.compact || false,
+      options.maxNodes || null,
+      options.fileGrouping !== false // Default to true unless --no-file-grouping is used
+    );
   });
 
 // Only run CLI if this file is executed directly
