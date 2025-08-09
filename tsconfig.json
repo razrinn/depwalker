@@ -22,6 +22,7 @@
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
+    "resolveJsonModule": true,
     // Style Options
     // "noImplicitReturns": true,
     // "noImplicitOverride": true,

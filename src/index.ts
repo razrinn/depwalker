@@ -1,8 +1,10 @@
 #!/usr/bin/env node
 
+import { Command } from 'commander';
 import { execSync } from 'child_process';
 import path from 'path';
 import ts from 'typescript';
+import packageJson from '../package.json';
 
 interface CallSite {
   callerId: string;
@@ -82,7 +84,10 @@ function getFunctionId(
       initializer.arguments.length > 0
     ) {
       const firstArg = initializer.arguments[0];
-      if (firstArg && (ts.isArrowFunction(firstArg) || ts.isFunctionExpression(firstArg))) {
+      if (
+        firstArg &&
+        (ts.isArrowFunction(firstArg) || ts.isFunctionExpression(firstArg))
+      ) {
         initializer = firstArg;
       }
     }
@@ -130,7 +135,9 @@ function visit(
       symbol = typeChecker.getAliasedSymbol(symbol);
     }
     const declarations = symbol?.getDeclarations();
-    return declarations && declarations.length > 0 ? declarations[0] : undefined;
+    return declarations && declarations.length > 0
+      ? declarations[0]
+      : undefined;
   };
 
   const addDependencyLink = (
@@ -155,7 +162,7 @@ function visit(
     }
     const calleeNode = callGraph.get(calleeId);
     if (!calleeNode) return;
-    
+
     const { line } = sourceFile.getLineAndCharacterOfPosition(
       callSiteNode.getStart()
     );
@@ -248,20 +255,7 @@ function visit(
   );
 }
 
-function analyzeProject() {
-  const args = process.argv.slice(2);
-  let maxDepth: number | null = null;
-  const depthIndex = args.findIndex((arg) => arg === '--depth');
-  if (depthIndex !== -1 && depthIndex + 1 < args.length) {
-    const depthArg = args[depthIndex + 1];
-    if (depthArg) {
-      const depthValue = parseInt(depthArg, 10);
-      if (!Number.isNaN(depthValue)) {
-        maxDepth = depthValue;
-      }
-    }
-  }
-
+function analyzeProject(maxDepth: number | null = null) {
   const changedLinesByFile = getChangedLinesByFile();
   if (changedLinesByFile.size === 0) {
     console.log('✅ No TypeScript files have changed.');
@@ -299,7 +293,7 @@ function analyzeProject() {
     const parts = functionId.split(':');
     const filePath = parts[0];
     if (!filePath) continue;
-    
+
     const changedLines = changedLinesByFile.get(filePath);
     if (changedLines) {
       for (const line of changedLines) {
@@ -425,4 +419,26 @@ function analyzeProject() {
   }
 }
 
-analyzeProject();
+// Setup Commander CLI
+const cli = new Command();
+
+cli
+  .name('depwalker')
+  .description('Analyze TypeScript dependency changes and their impact')
+  .version(packageJson.version)
+  .option(
+    '-d, --depth <number>',
+    'Maximum depth for dependency analysis',
+    (value) => {
+      const parsed = parseInt(value, 10);
+      if (isNaN(parsed) || parsed < 0) {
+        throw new Error('Depth must be a positive number');
+      }
+      return parsed;
+    }
+  )
+  .action((options) => {
+    analyzeProject(options.depth || null);
+  });
+
+cli.parse();
