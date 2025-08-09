@@ -4,7 +4,66 @@ import { Command } from 'commander';
 import { execSync } from 'child_process';
 import path from 'path';
 import ts from 'typescript';
+import spinners from 'cli-spinners';
 import packageJson from '../package.json';
+
+// Simple spinner implementation
+class Spinner {
+  private spinner: NodeJS.Timeout | null = null;
+  private frames: string[];
+  private interval: number;
+  private currentFrame = 0;
+  private text: string;
+
+  constructor(type: keyof typeof spinners = 'dots', text = '') {
+    const spinnerData = spinners[type];
+    this.frames = spinnerData.frames;
+    this.interval = spinnerData.interval;
+    this.text = text;
+  }
+
+  start(): void {
+    process.stdout.write('\x1B[?25l'); // Hide cursor
+    this.spinner = setInterval(() => {
+      const frame = this.frames[this.currentFrame];
+      process.stdout.write(`\r\x1b[36m${frame}\x1b[0m ${this.text}`);
+      this.currentFrame = (this.currentFrame + 1) % this.frames.length;
+    }, this.interval);
+  }
+
+  succeed(text?: string): void {
+    this.stop();
+    process.stdout.write(`\r\x1b[32m✓\x1b[0m ${text || this.text}\n`);
+  }
+
+  fail(text?: string): void {
+    this.stop();
+    process.stdout.write(`\r\x1b[31m✗\x1b[0m ${text || this.text}\n`);
+  }
+
+  warn(text?: string): void {
+    this.stop();
+    process.stdout.write(`\r\x1b[33m⚠\x1b[0m ${text || this.text}\n`);
+  }
+
+  info(text?: string): void {
+    this.stop();
+    process.stdout.write(`\r\x1b[36mℹ\x1b[0m ${text || this.text}\n`);
+  }
+
+  stop(): void {
+    if (this.spinner) {
+      clearInterval(this.spinner);
+      this.spinner = null;
+    }
+    process.stdout.write('\r\x1B[K'); // Clear current line
+    process.stdout.write('\x1B[?25h'); // Show cursor
+  }
+
+  updateText(text: string): void {
+    this.text = text;
+  }
+}
 
 interface CallSite {
   callerId: string;
@@ -415,15 +474,41 @@ function createTsProgram(tsConfigPath = './tsconfig.json'): ts.Program {
   }
 }
 
-// Pure function to perform the complete analysis
+// Pure function to perform the complete analysis with spinner progress
 function performAnalysis(
   diffOutput: string,
   tsConfigPath = './tsconfig.json'
 ): AnalysisResult {
+  let spinner: Spinner;
+  
+  // Parse git diff
+  spinner = new Spinner('dots', 'Parsing git diff output...');
+  spinner.start();
   const changedLinesByFile = parseGitDiff(diffOutput);
+  const fileCount = changedLinesByFile.size;
+  spinner.succeed(`Parsed git diff - found ${fileCount} changed TypeScript file${fileCount !== 1 ? 's' : ''}`);
+
+  // Create TypeScript program
+  spinner = new Spinner('dots', 'Creating TypeScript program...');
+  spinner.start();
   const program = createTsProgram(tsConfigPath);
+  const sourceFiles = program.getSourceFiles().filter(sf => !sf.isDeclarationFile);
+  spinner.succeed(`Created TypeScript program - analyzing ${sourceFiles.length} source files`);
+
+  // Build call graph
+  spinner = new Spinner('dots', 'Building call graph from source files...');
+  spinner.start();
   const callGraph = buildCallGraph(program);
+  const functionCount = callGraph.size;
+  spinner.succeed(`Built call graph - discovered ${functionCount} functions`);
+
+  // Find changed functions
+  spinner = new Spinner('dots', 'Identifying changed functions...');
+  spinner.start();
   const changedFunctions = findChangedFunctions(callGraph, changedLinesByFile);
+  const changedFuncCount = Array.from(changedFunctions.values())
+    .reduce((total, funcSet) => total + funcSet.size, 0);
+  spinner.succeed(`Analysis complete - ${changedFuncCount} changed function${changedFuncCount !== 1 ? 's' : ''} identified`);
 
   return {
     changedFiles: Array.from(changedLinesByFile.keys()),
@@ -450,17 +535,11 @@ function printAnalysisResults(
 
   console.log(
     '🔍 Changed files:',
-    changedFiles.map((p) => truncatePath(p))
+    changedFiles.map((p) => truncatePath(p)).join(', ')
   );
 
-  console.log('\n---');
-  console.log(`Analyzing${maxDepth ? ` with max depth: ${maxDepth}` : ''}...`);
-
   if (changedFunctions.size === 0) {
-    console.log('\n---');
-    console.log(
-      '🤔 No changed functions were detected within the modified files.'
-    );
+    console.log('\n🤔 No changed functions were detected within the modified files.');
     return;
   }
 
@@ -561,12 +640,39 @@ function analyzeProject(
   maxDepth: number | null = null,
   tsConfigPath: string = './tsconfig.json'
 ): void {
+  let spinner: Spinner | undefined;
+  
   try {
+    // Initial header
+    console.log('\n🚀 DepWalker - TypeScript Dependency Analysis\n');
+    
+    // Fetch git diff
+    spinner = new Spinner('dots', 'Fetching git diff...');
+    spinner.start();
     const diffOutput = getGitDiff();
+    
+    if (!diffOutput.trim()) {
+      spinner.info('No changes detected in git diff');
+      console.log('\n✅ No TypeScript files have changed.');
+      return;
+    }
+    
+    spinner.succeed('Git diff fetched successfully');
+    console.log(); // Add spacing before analysis
+    
+    // Perform analysis with progress indicators
     const result = performAnalysis(diffOutput, tsConfigPath);
+    
+    // Add spacing before results
+    console.log();
+    
+    // Print results
     printAnalysisResults(result, maxDepth);
   } catch (error) {
-    console.error('Error during analysis:', error);
+    if (spinner) {
+      spinner.fail('Analysis failed');
+    }
+    console.error('\n❌ Error during analysis:', error);
     process.exit(1);
   }
 }
