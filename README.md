@@ -25,8 +25,8 @@ Run directly without installation:
 
 ```bash
 npx depwalker
-# or with depth limit
-npx depwalker --depth 3
+# or with options
+npx depwalker --depth 3 --tsconfig ./tsconfig.prod.json
 ```
 
 ### Project-level Installation
@@ -62,6 +62,12 @@ npx depwalker
 
 # With depth limit (useful for large codebases)
 depwalker --depth 3
+
+# With custom tsconfig.json location
+depwalker --tsconfig ./custom-tsconfig.json
+
+# Combining options
+depwalker --depth 2 --tsconfig ./build/tsconfig.prod.json
 ```
 
 ### Pre-commit Integration
@@ -75,7 +81,7 @@ Create `.git/hooks/pre-commit`:
 ```bash
 #!/bin/sh
 echo "🔍 Analyzing dependency impact..."
-npx depwalker --depth 3
+npx depwalker --depth 3 --tsconfig ./tsconfig.json
 echo "\n✅ Review the impact above before proceeding with commit."
 read -p "Continue with commit? (y/N): " -n 1 -r
 echo
@@ -92,7 +98,7 @@ Add to your `package.json`:
 ```json
 {
   "scripts": {
-    "pre-commit": "depwalker --depth 3",
+    "pre-commit": "depwalker --depth 3 --tsconfig ./tsconfig.json",
     "commit-check": "npm run pre-commit && echo 'Ready to commit!'"
   }
 }
@@ -174,6 +180,31 @@ depwalker/
 
 DepWalker uses your project's `tsconfig.json` file for TypeScript compilation settings. Make sure your `tsconfig.json` is properly configured for your project.
 
+### Command Line Options
+
+- **`-d, --depth <number>`**: Maximum depth for dependency analysis. Useful for limiting the scope in large codebases.
+- **`-t, --tsconfig <path>`**: Path to the TypeScript configuration file (default: `./tsconfig.json`).
+
+### Custom TypeScript Configuration
+
+The `--tsconfig` option is particularly useful in these scenarios:
+
+- **Multiple tsconfig files**: Use production, development, or test-specific configurations
+- **Monorepo setup**: Point to specific package configurations
+- **Custom build directories**: When your tsconfig is in a different location
+- **CI/CD environments**: Use optimized configurations for analysis
+
+```bash
+# Use production configuration
+depwalker --tsconfig ./tsconfig.prod.json
+
+# Point to a different directory
+depwalker --tsconfig ../config/tsconfig.analysis.json
+
+# Monorepo package-specific analysis
+depwalker --tsconfig ./packages/core/tsconfig.json
+```
+
 ### TypeScript Config Requirements
 
 Your `tsconfig.json` should include:
@@ -181,6 +212,7 @@ Your `tsconfig.json` should include:
 - Proper `include` and `exclude` paths
 - Module resolution settings
 - Target and lib configurations
+- Correct `baseUrl` and `paths` for module resolution
 
 ## 🤝 Contributing
 
