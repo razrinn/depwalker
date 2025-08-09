@@ -76,7 +76,8 @@ function performAnalysis(
  */
 function analyzeProject(
   maxDepth: number | null = null,
-  tsConfigPath: string = './tsconfig.json'
+  tsConfigPath: string = './tsconfig.json',
+  format: string = 'tree'
 ): void {
   let spinner: Spinner | undefined;
 
@@ -105,7 +106,7 @@ function analyzeProject(
     console.log();
 
     // Print results
-    printAnalysisResults(result, maxDepth);
+    printAnalysisResults(result, maxDepth, format);
   } catch (error) {
     if (spinner) {
       spinner.fail('Analysis failed');
@@ -138,8 +139,13 @@ cli
     'Path to tsconfig.json file',
     './tsconfig.json'
   )
+  .option(
+    '-f, --format <type>',
+    'Output format: tree (default), list, json, summary',
+    'tree'
+  )
   .action((options) => {
-    analyzeProject(options.depth || null, options.tsconfig);
+    analyzeProject(options.depth || null, options.tsconfig, options.format);
   });
 
 // Only run CLI if this file is executed directly

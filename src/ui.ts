@@ -66,7 +66,8 @@ export class Spinner {
  */
 export function printAnalysisResults(
   result: AnalysisResult,
-  maxDepth: number | null = null
+  maxDepth: number | null = null,
+  format: string = 'tree'
 ): void {
   const { changedFiles, changedFunctions, callGraph } = result;
 
@@ -87,6 +88,32 @@ export function printAnalysisResults(
     return;
   }
 
+  // Route to appropriate formatter
+  switch (format.toLowerCase()) {
+    case 'tree':
+    default:
+      printTreeFormat(changedFunctions, callGraph, maxDepth);
+      break;
+    case 'list':
+      printListFormat(changedFunctions, callGraph, maxDepth);
+      break;
+    case 'json':
+      printJsonFormat(result, maxDepth);
+      break;
+    case 'summary':
+      printSummaryFormat(changedFunctions, callGraph);
+      break;
+  }
+}
+
+/**
+ * Tree format (original format)
+ */
+function printTreeFormat(
+  changedFunctions: Map<string, Set<string>>,
+  callGraph: any,
+  maxDepth: number | null
+): void {
   const colors = {
     reset: '\x1b[0m',
     bright: '\x1b[1m',
@@ -177,4 +204,164 @@ export function printAnalysisResults(
       }
     }
   }
+}
+
+/**
+ * List format (flat list of dependencies)
+ */
+function printListFormat(
+  changedFunctions: Map<string, Set<string>>,
+  callGraph: any,
+  maxDepth: number | null
+): void {
+  console.log('\n📋 Changed Functions and Their Dependencies:\n');
+  
+  for (const [filePath, functionIds] of changedFunctions.entries()) {
+    console.log(`\n📁 ${truncatePath(filePath)}:`);
+    
+    for (const sourceFunctionId of functionIds) {
+      const sourceParts = sourceFunctionId.split(':');
+      const sourceFunc = sourceParts[1] || 'unknown';
+      const sourceNode = callGraph.get(sourceFunctionId);
+      const defLine = sourceNode?.definition?.startLine;
+      
+      console.log(`\n  🔸 ${sourceFunc} (line ~${defLine || '?'})`);
+      
+      if (!sourceNode || sourceNode.callers.length === 0) {
+        console.log('    • No dependencies found');
+      } else {
+        const allDependents = collectAllDependents(sourceFunctionId, callGraph, maxDepth);
+        allDependents.forEach((dependent, index) => {
+          const [depFile, depFunc] = dependent.split(':');
+          console.log(`    ${index + 1}. ${depFunc} in ${truncatePath(depFile || '')}`);
+        });
+      }
+    }
+  }
+}
+
+/**
+ * JSON format
+ */
+function printJsonFormat(result: AnalysisResult, maxDepth: number | null): void {
+  const output = {
+    changedFiles: result.changedFiles,
+    analysis: {
+      maxDepth,
+      timestamp: new Date().toISOString(),
+      totalChangedFunctions: Array.from(result.changedFunctions.values())
+        .reduce((total, funcSet) => total + funcSet.size, 0)
+    },
+    changes: [] as any[]
+  };
+  
+  for (const [filePath, functionIds] of result.changedFunctions.entries()) {
+    for (const functionId of functionIds) {
+      const parts = functionId.split(':');
+      const functionName = parts[1] || 'unknown';
+      const functionNode = result.callGraph.get(functionId);
+      
+      const dependents = collectAllDependents(functionId, result.callGraph, maxDepth)
+        .map(dep => {
+          const [depFile, depFunc] = dep.split(':');
+          return { file: depFile, function: depFunc };
+        });
+      
+      output.changes.push({
+        file: filePath,
+        function: functionName,
+        line: functionNode?.definition?.startLine || null,
+        dependentCount: dependents.length,
+        dependents
+      });
+    }
+  }
+  
+  console.log(JSON.stringify(output, null, 2));
+}
+
+/**
+ * Summary format (high-level overview)
+ */
+function printSummaryFormat(
+  changedFunctions: Map<string, Set<string>>,
+  callGraph: any
+): void {
+  console.log('\n📊 Impact Summary:\n');
+  
+  const totalChanged = Array.from(changedFunctions.values())
+    .reduce((total, funcSet) => total + funcSet.size, 0);
+  const totalFiles = changedFunctions.size;
+  
+  console.log(`• Changed files: ${totalFiles}`);
+  console.log(`• Changed functions: ${totalChanged}`);
+  
+  // Calculate impact metrics
+  const impactStats = { high: 0, medium: 0, low: 0, none: 0 };
+  
+  for (const [filePath, functionIds] of changedFunctions.entries()) {
+    for (const functionId of functionIds) {
+      const dependentCount = collectAllDependents(functionId, callGraph, null).length;
+      if (dependentCount === 0) impactStats.none++;
+      else if (dependentCount <= 2) impactStats.low++;
+      else if (dependentCount <= 5) impactStats.medium++;
+      else impactStats.high++;
+    }
+  }
+  
+  console.log(`\n📈 Impact Distribution:`);
+  console.log(`• High impact (6+ dependents): ${impactStats.high}`);
+  console.log(`• Medium impact (3-5 dependents): ${impactStats.medium}`);
+  console.log(`• Low impact (1-2 dependents): ${impactStats.low}`);
+  console.log(`• No impact (0 dependents): ${impactStats.none}`);
+  
+  // Top impacted functions
+  const impactList = [];
+  for (const [filePath, functionIds] of changedFunctions.entries()) {
+    for (const functionId of functionIds) {
+      const parts = functionId.split(':');
+      const functionName = parts[1] || 'unknown';
+      const dependentCount = collectAllDependents(functionId, callGraph, null).length;
+      impactList.push({ file: filePath, function: functionName, count: dependentCount });
+    }
+  }
+  
+  const topImpacted = impactList
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 5);
+    
+  if (topImpacted.length > 0) {
+    console.log(`\n🎯 Top Impacted Functions:`);
+    topImpacted.forEach((item, index) => {
+      console.log(`  ${index + 1}. ${item.function} in ${truncatePath(item.file)} (${item.count} dependents)`);
+    });
+  }
+}
+
+/**
+ * Helper function to collect all dependents
+ */
+function collectAllDependents(
+  functionId: string,
+  callGraph: any,
+  maxDepth: number | null,
+  visited = new Set<string>()
+): string[] {
+  if (visited.has(functionId) || (maxDepth !== null && visited.size >= maxDepth)) {
+    return [];
+  }
+  
+  visited.add(functionId);
+  const dependents = [];
+  const node = callGraph.get(functionId);
+  
+  if (node && node.callers) {
+    for (const caller of node.callers) {
+      dependents.push(caller.callerId);
+      const childDependents = collectAllDependents(caller.callerId, callGraph, maxDepth, new Set(visited));
+      dependents.push(...childDependents);
+    }
+  }
+  
+  return [...new Set(dependents)]; // Remove duplicates
 }
