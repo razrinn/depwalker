@@ -25,8 +25,8 @@ Run directly without installation:
 
 ```bash
 npx depwalker
-# or with options
-npx depwalker --depth 3 --tsconfig ./tsconfig.prod.json
+# or with advanced options
+npx depwalker --depth 3 --format tree --compact --tsconfig ./tsconfig.prod.json
 ```
 
 ### Project-level Installation
@@ -56,6 +56,8 @@ depwalker
 
 Run DepWalker in your TypeScript project directory with uncommitted changes:
 
+### Basic Usage
+
 ```bash
 # Basic usage
 npx depwalker
@@ -68,6 +70,27 @@ depwalker --tsconfig ./custom-tsconfig.json
 
 # Combining options
 depwalker --depth 2 --tsconfig ./build/tsconfig.prod.json
+```
+
+### Advanced Usage
+
+```bash
+# Different output formats
+depwalker --format tree    # Default tree view
+depwalker --format list    # Flat list format
+depwalker --format json    # JSON output for programmatic use
+
+# Compact mode for large codebases (reduces duplicate references)
+depwalker --compact
+
+# Limit total nodes to prevent overwhelming output
+depwalker --max-nodes 50
+
+# Disable file grouping (show each function separately)
+depwalker --no-file-grouping
+
+# Combine all advanced options
+depwalker --depth 3 --format tree --compact --max-nodes 100 --tsconfig ./tsconfig.json
 ```
 
 ### Pre-commit Integration
@@ -112,30 +135,108 @@ npm run commit-check
 
 ### Example Output
 
-```
-🔍 Changed files: [.../src/components/Button.tsx, .../src/utils/helpers.ts]
+#### Tree Format (Default)
 
----
-Analyzing...
+```
+🚀 DepWalker - TypeScript Dependency Analysis
+
+✓ Git diff fetched successfully
+✓ Parsed git diff - found 2 changed TypeScript files
+✓ Created TypeScript program - analyzing 847 source files
+✓ Built call graph - discovered 1,204 functions
+✓ Analysis complete - 3 changed functions identified
+
+🔍 Changed files: .../components/Button.tsx, .../utils/helpers.ts
 
 ---
 Detected changes in these functions:
   In src/components/Button.tsx:
     - handleClick
+    - validateInput
   In src/utils/helpers.ts:
     - formatDate
 
 💥 Dependency Walker Analysis 💥
+[Compact mode, Max depth 3, File grouping]
 
 📁 Changes in: src/components/Button.tsx
 ==================================================
 
 🎯 Change Source: handleClick (line ~23)
 --------------------------------------------------
-    ├── ButtonGroup in src/components/ButtonGroup.tsx (line ~45)
+    ├── ButtonGroup, ActionButton in src/components/ButtonGroup.tsx (lines ~45, 67)
     │   └── Toolbar in src/components/Toolbar.tsx (line ~12)
     │       └── MainLayout in src/layouts/MainLayout.tsx (line ~78)
     └── ActionPanel in src/components/ActionPanel.tsx (line ~34)
+        └── (Reference to Toolbar - 3 callers)
+
+🎯 Change Source: validateInput (line ~15)
+--------------------------------------------------
+    └── No external callers found in the project.
+
+📊 Impact Summary:
+
+• Changed files: 2
+• Changed functions: 3
+
+📈 Impact Distribution:
+• High impact (6+ dependents): 0
+• Medium impact (3-5 dependents): 1
+• Low impact (1-2 dependents): 1
+• No impact (0 dependents): 1
+
+🎯 Top Impacted Functions:
+  1. handleClick in .../components/Button.tsx (4 dependents)
+  2. formatDate in .../utils/helpers.ts (2 dependents)
+  3. validateInput in .../components/Button.tsx (0 dependents)
+```
+
+#### List Format
+
+```bash
+# depwalker --format list
+📋 Changed Functions and Their Dependencies:
+
+📁 src/components/Button.tsx:
+
+  🔸 handleClick (line ~23)
+    1. ButtonGroup in .../components/ButtonGroup.tsx
+    2. ActionButton in .../components/ButtonGroup.tsx
+    3. Toolbar in .../components/Toolbar.tsx
+    4. MainLayout in .../layouts/MainLayout.tsx
+    5. ActionPanel in .../components/ActionPanel.tsx
+
+  🔸 validateInput (line ~15)
+    • No dependencies found
+```
+
+#### JSON Format
+
+```bash
+# depwalker --format json
+{
+  "changedFiles": ["src/components/Button.tsx", "src/utils/helpers.ts"],
+  "analysis": {
+    "maxDepth": null,
+    "timestamp": "2024-08-09T19:47:14.235Z",
+    "totalChangedFunctions": 3
+  },
+  "changes": [
+    {
+      "file": "src/components/Button.tsx",
+      "function": "handleClick",
+      "line": 23,
+      "dependentCount": 4,
+      "dependents": [
+        { "file": "src/components/ButtonGroup.tsx", "function": "ButtonGroup" },
+        { "file": "src/components/ButtonGroup.tsx", "function": "ActionButton" },
+        { "file": "src/components/Toolbar.tsx", "function": "Toolbar" },
+        { "file": "src/layouts/MainLayout.tsx", "function": "MainLayout" },
+        { "file": "src/components/ActionPanel.tsx", "function": "ActionPanel" }
+      ]
+    }
+  ]
+}
 ```
 
 ## 🛠️ Development
@@ -151,7 +252,9 @@ Detected changes in these functions:
 ```
 depwalker/
 ├── src/
-│   └── index.ts        # Main application logic
+│   ├── index.ts        # Main CLI application
+│   ├── analyzer.ts     # TypeScript analysis and dependency graph logic
+│   └── ui.ts          # Output formatting and progress indicators
 ├── dist/               # Compiled JavaScript output (generated)
 ├── package.json        # Project metadata and dependencies
 ├── tsconfig.json       # TypeScript configuration
@@ -171,10 +274,16 @@ depwalker/
    - Identifies all function declarations and variable declarations that contain functions
    - Tracks all function calls and JSX component usage
    - Builds a complete call graph with line number information
+   - Handles React patterns like `React.memo()` and dynamic imports
+   - Tracks JSX component usage and dependencies
 
 4. **Impact Analysis**: For each changed function, it traverses the dependency graph to find all functions that directly or indirectly depend on it.
 
-5. **Visual Output**: Finally, it presents the results in a tree format showing the complete impact chain of your changes.
+5. **Smart Output**: Presents results with intelligent formatting:
+   - **File Grouping**: Groups multiple functions from the same file
+   - **Circular Reference Detection**: Identifies and handles circular dependencies
+   - **Progress Indicators**: Shows real-time progress with spinners
+   - **Impact Statistics**: Provides summary metrics and top impacted functions
 
 ## 🔧 Configuration
 
@@ -182,8 +291,42 @@ DepWalker uses your project's `tsconfig.json` file for TypeScript compilation se
 
 ### Command Line Options
 
+#### Core Options
+
 - **`-d, --depth <number>`**: Maximum depth for dependency analysis. Useful for limiting the scope in large codebases.
 - **`-t, --tsconfig <path>`**: Path to the TypeScript configuration file (default: `./tsconfig.json`).
+
+#### Output Format Options
+
+- **`-f, --format <type>`**: Output format - `tree` (default), `list`, or `json`
+  - `tree`: Hierarchical tree view (default)
+  - `list`: Flat list of dependencies
+  - `json`: JSON output for programmatic use
+
+#### Display Control Options
+
+- **`-c, --compact`**: Enable compact mode - reduces duplicate references and limits callers per function. Useful for large codebases.
+- **`--max-nodes <number>`**: Maximum total nodes to display in the entire tree. Prevents overwhelming output on very large dependency chains.
+- **`--no-file-grouping`**: Disable grouping of multiple functions from the same file. Shows each function separately instead of grouping them.
+
+#### Examples
+
+```bash
+# Basic analysis with depth limit
+depwalker --depth 5
+
+# Compact analysis for large codebases
+depwalker --compact --max-nodes 50
+
+# JSON output for CI/CD integration
+depwalker --format json --depth 3 > impact-analysis.json
+
+# Detailed analysis with custom config
+depwalker --format tree --tsconfig ./custom-tsconfig.json --no-file-grouping
+
+# Conservative analysis for huge codebases
+depwalker --compact --depth 2 --max-nodes 25 --format list
+```
 
 ### Custom TypeScript Configuration
 
