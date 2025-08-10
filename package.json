@@ -50,7 +50,7 @@
   },
   "homepage": "https://github.com/razrinn/depwalker#readme",
   "engines": {
-    "node": ">=20.0.0"
+    "node": ">=18.0.0"
   },
   "packageManager": "pnpm@10.11.0",
   "dependencies": {

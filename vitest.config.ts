@@ -39,7 +39,8 @@ export default defineConfig({
     hookTimeout: 30000,
 
     // Reporter settings
-    reporters: ['verbose'],
+    reporters: ['verbose', 'junit'],
+    outputFile: 'test-report-report.junit.xml',
 
     // Setup files
     setupFiles: ['./test/setup.ts'],

@@ -53,12 +53,17 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          directory: ./coverage/
-          files: ./coverage/lcov.info
-          fail_ci_if_error: false
+          file: ./coverage/lcov.info
+          fail_ci_if_error: true
           verbose: true
           name: depwalker-coverage
           flags: unittests
+
+      - name: Upload test results to Codecov
+        if: matrix.node-version == 20 && ${{ !cancelled() }}
+        uses: codecov/test-results-action@v1
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build project
         run: pnpm build
