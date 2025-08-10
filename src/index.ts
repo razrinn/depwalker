@@ -17,12 +17,20 @@ import { printAnalysisResults, Spinner } from './ui';
 /**
  * Performs the complete analysis with progress indicators
  */
-function performAnalysis(
-  diffOutput: string,
-  tsConfigPath = './tsconfig.json',
-  includeVariables = true,
-  silent = false
-): AnalysisResult {
+interface PerformAnalysisOptions {
+  diffOutput: string;
+  tsConfigPath?: string;
+  includeVariables?: boolean;
+  silent?: boolean;
+}
+
+function performAnalysis(options: PerformAnalysisOptions): AnalysisResult {
+  const {
+    diffOutput,
+    tsConfigPath = './tsconfig.json',
+    includeVariables = true,
+    silent = false
+  } = options;
   let spinner: Spinner;
 
   // Parse git diff
@@ -138,15 +146,26 @@ function performAnalysis(
 /**
  * Main function that orchestrates the analysis
  */
-function analyzeProject(
-  maxDepth: number | null = null,
-  tsConfigPath: string = './tsconfig.json',
-  format: string = 'tree',
-  compact: boolean = false,
-  maxNodes: number | null = null,
-  groupByFile: boolean = true,
-  includeVariables: boolean = true
-): void {
+interface AnalyzeProjectOptions {
+  maxDepth?: number | null;
+  tsConfigPath?: string;
+  format?: string;
+  compact?: boolean;
+  maxNodes?: number | null;
+  groupByFile?: boolean;
+  includeVariables?: boolean;
+}
+
+function analyzeProject(options: AnalyzeProjectOptions = {}): void {
+  const {
+    maxDepth = null,
+    tsConfigPath = './tsconfig.json',
+    format = 'tree',
+    compact = false,
+    maxNodes = null,
+    groupByFile = true,
+    includeVariables = true
+  } = options;
   let spinner: Spinner | undefined;
   const isJsonFormat = format.toLowerCase() === 'json';
 
@@ -192,12 +211,12 @@ function analyzeProject(
     }
 
     // Perform analysis with progress indicators (silent for JSON)
-    const result = performAnalysis(
+    const result = performAnalysis({
       diffOutput,
       tsConfigPath,
       includeVariables,
-      isJsonFormat
-    );
+      silent: isJsonFormat
+    });
 
     // Add spacing before results (suppress for JSON)
     if (!isJsonFormat) {
@@ -205,14 +224,14 @@ function analyzeProject(
     }
 
     // Print results
-    printAnalysisResults(
+    printAnalysisResults({
       result,
       maxDepth,
       format,
       compact,
       maxNodes,
       groupByFile
-    );
+    });
   } catch (error) {
     if (isJsonFormat) {
       // For JSON format, output error in JSON format to stderr
@@ -286,15 +305,15 @@ cli
     'Disable variable change tracking and impact analysis'
   )
   .action((options) => {
-    analyzeProject(
-      options.depth || null,
-      options.tsconfig,
-      options.format,
-      options.compact || false,
-      options.maxNodes || null,
-      options.fileGrouping !== false, // Default to true unless --no-file-grouping is used
-      !options.noVariables // Default to true unless --no-variables is used
-    );
+    analyzeProject({
+      maxDepth: options.depth || null,
+      tsConfigPath: options.tsconfig,
+      format: options.format,
+      compact: options.compact || false,
+      maxNodes: options.maxNodes || null,
+      groupByFile: options.fileGrouping !== false, // Default to true unless --no-file-grouping is used
+      includeVariables: !options.noVariables // Default to true unless --no-variables is used
+    });
   });
 
 // Only run CLI if this file is executed directly

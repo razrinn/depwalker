@@ -93,14 +93,24 @@ export class Spinner {
 /**
  * Prints the analysis results with formatted output
  */
-export function printAnalysisResults(
-  result: AnalysisResult,
-  maxDepth: number | null = null,
-  format: string = 'tree',
-  compact: boolean = false,
-  maxNodes: number | null = null,
-  groupByFile: boolean = true
-): void {
+interface PrintAnalysisResultsOptions {
+  result: AnalysisResult;
+  maxDepth?: number | null;
+  format?: string;
+  compact?: boolean;
+  maxNodes?: number | null;
+  groupByFile?: boolean;
+}
+
+export function printAnalysisResults(options: PrintAnalysisResultsOptions): void {
+  const {
+    result,
+    maxDepth = null,
+    format = 'tree',
+    compact = false,
+    maxNodes = null,
+    groupByFile = true
+  } = options;
   const {
     changedFiles,
     changedFunctions,
@@ -141,10 +151,10 @@ export function printAnalysisResults(
   switch (format.toLowerCase()) {
     case 'tree':
     default:
-      printTreeFormat(result, maxDepth, compact, maxNodes, groupByFile);
+      printTreeFormat({ result, maxDepth, compact, maxNodes, groupByFile });
       break;
     case 'list':
-      printListFormat(result, maxDepth);
+      printListFormat({ result, maxDepth });
       break;
   }
 
@@ -155,13 +165,22 @@ export function printAnalysisResults(
 /**
  * Tree format (original format)
  */
-function printTreeFormat(
-  result: AnalysisResult,
-  maxDepth: number | null,
-  compact: boolean = false,
-  maxNodes: number | null = null,
-  groupByFile: boolean = true
-): void {
+interface PrintTreeFormatOptions {
+  result: AnalysisResult;
+  maxDepth?: number | null;
+  compact?: boolean;
+  maxNodes?: number | null;
+  groupByFile?: boolean;
+}
+
+function printTreeFormat(options: PrintTreeFormatOptions): void {
+  const {
+    result,
+    maxDepth = null,
+    compact = false,
+    maxNodes = null,
+    groupByFile = true
+  } = options;
   const { changedFunctions, callGraph, changedVariables, variableGraph } =
     result;
   const colors = COLORS;
@@ -178,7 +197,7 @@ function printTreeFormat(
     visitedPath: Set<string>,
     currentDepth: number
   ) => {
-    const lines = generateImpactTree(
+    const lines = generateImpactTree({
       calleeId,
       callGraph,
       maxDepth,
@@ -190,7 +209,7 @@ function printTreeFormat(
       maxNodes,
       compact,
       groupByFile
-    );
+    });
     lines.forEach((line) => {
       // Apply colors to the output
       const coloredLine = line
@@ -440,19 +459,19 @@ function printTreeFormat(
             ) {
               const subPrefix = isLast ? '        ' : '    │   ';
               const limitedDepth = maxDepth ? Math.max(1, maxDepth - 1) : 2; // Limit depth for variables
-              const subLines = generateImpactTree(
-                functionId,
+              const subLines = generateImpactTree({
+                calleeId: functionId,
                 callGraph,
-                limitedDepth,
-                new Set(),
-                0,
-                subPrefix,
-                new Set(),
-                { count: 0 },
-                maxNodes ? Math.min(10, maxNodes) : 10, // Limit nodes for variables
-                true, // Use compact mode for variables
+                maxDepth: limitedDepth,
+                visitedPath: new Set(),
+                currentDepth: 0,
+                prefix: subPrefix,
+                globalVisited: new Set(),
+                nodeCounter: { count: 0 },
+                maxNodes: maxNodes ? Math.min(10, maxNodes) : 10, // Limit nodes for variables
+                compact: true, // Use compact mode for variables
                 groupByFile
-              );
+              });
               subLines.slice(0, 5).forEach((line) => {
                 // Limit to 5 lines
                 const coloredLine = line.replace(
@@ -479,10 +498,16 @@ function printTreeFormat(
 /**
  * List format (flat list of dependencies)
  */
-function printListFormat(
-  result: AnalysisResult,
-  maxDepth: number | null
-): void {
+interface PrintListFormatOptions {
+  result: AnalysisResult;
+  maxDepth?: number | null;
+}
+
+function printListFormat(options: PrintListFormatOptions): void {
+  const {
+    result,
+    maxDepth = null
+  } = options;
   const { changedFunctions, callGraph, changedVariables, variableGraph } =
     result;
   const colors = COLORS;

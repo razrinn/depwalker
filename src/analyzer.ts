@@ -414,19 +414,34 @@ function groupCallersByFile(callers: CallSite[]): GroupedCaller[] {
   }));
 }
 
-export function generateImpactTree(
-  calleeId: string,
-  callGraph: CallGraph,
-  maxDepth: number | null = null,
-  visitedPath: Set<string> = new Set(),
-  currentDepth = 0,
-  prefix = '',
-  globalVisited: Set<string> = new Set(),
-  nodeCounter: { count: number } = { count: 0 },
-  maxNodes: number | null = null,
-  compact: boolean = false,
-  groupByFile: boolean = true
-): string[] {
+interface GenerateImpactTreeOptions {
+  calleeId: string;
+  callGraph: CallGraph;
+  maxDepth?: number | null;
+  visitedPath?: Set<string>;
+  currentDepth?: number;
+  prefix?: string;
+  globalVisited?: Set<string>;
+  nodeCounter?: { count: number };
+  maxNodes?: number | null;
+  compact?: boolean;
+  groupByFile?: boolean;
+}
+
+export function generateImpactTree(options: GenerateImpactTreeOptions): string[] {
+  const {
+    calleeId,
+    callGraph,
+    maxDepth = null,
+    visitedPath = new Set(),
+    currentDepth = 0,
+    prefix = '',
+    globalVisited = new Set(),
+    nodeCounter = { count: 0 },
+    maxNodes = null,
+    compact = false,
+    groupByFile = true
+  } = options;
   const lines: string[] = [];
 
   // Check node limit
@@ -501,19 +516,19 @@ export function generateImpactTree(
             )} (line ~${func.line})`
           );
           lines.push(
-            ...generateImpactTree(
-              func.callerId,
+            ...generateImpactTree({
+              calleeId: func.callerId,
               callGraph,
               maxDepth,
               visitedPath,
-              currentDepth + 1,
-              groupPrefix,
+              currentDepth: currentDepth + 1,
+              prefix: groupPrefix,
               globalVisited,
               nodeCounter,
               maxNodes,
               compact,
               groupByFile
-            )
+            })
           );
         }
       } else {
@@ -539,19 +554,19 @@ export function generateImpactTree(
         const groupGlobalVisited = new Set(globalVisited);
 
         for (const func of group.functions) {
-          const funcLines = generateImpactTree(
-            func.callerId,
+          const funcLines = generateImpactTree({
+            calleeId: func.callerId,
             callGraph,
             maxDepth,
-            new Set(visitedPath),
-            currentDepth + 1,
-            '',
-            groupGlobalVisited,
+            visitedPath: new Set(visitedPath),
+            currentDepth: currentDepth + 1,
+            prefix: '',
+            globalVisited: groupGlobalVisited,
             nodeCounter,
             maxNodes,
             compact,
             groupByFile
-          );
+          });
           consolidatedLines.push(...funcLines);
         }
 
@@ -593,19 +608,19 @@ export function generateImpactTree(
         )} (line ~${line})`
       );
       lines.push(
-        ...generateImpactTree(
-          callerId,
+        ...generateImpactTree({
+          calleeId: callerId,
           callGraph,
           maxDepth,
           visitedPath,
-          currentDepth + 1,
-          newPrefix,
+          currentDepth: currentDepth + 1,
+          prefix: newPrefix,
           globalVisited,
           nodeCounter,
           maxNodes,
           compact,
           groupByFile
-        )
+        })
       );
     });
 
