@@ -20,52 +20,71 @@ import { printAnalysisResults, Spinner } from './ui';
 function performAnalysis(
   diffOutput: string,
   tsConfigPath = './tsconfig.json',
-  includeVariables = true
+  includeVariables = true,
+  silent = false
 ): AnalysisResult {
   let spinner: Spinner;
 
   // Parse git diff
-  spinner = new Spinner('dots', 'Parsing git diff output...');
-  spinner.start();
+  if (!silent) {
+    spinner = new Spinner('dots', 'Parsing git diff output...');
+    spinner.start();
+  }
   const changedLinesByFile = parseGitDiff(diffOutput);
   const fileCount = changedLinesByFile.size;
-  spinner.succeed(
-    `Parsed git diff - found ${fileCount} changed TypeScript file${
-      fileCount !== 1 ? 's' : ''
-    }`
-  );
+  if (!silent) {
+    spinner!.succeed(
+      `Parsed git diff - found ${fileCount} changed TypeScript file${
+        fileCount !== 1 ? 's' : ''
+      }`
+    );
+  }
 
   // Create TypeScript program
-  spinner = new Spinner('dots', 'Creating TypeScript program...');
-  spinner.start();
+  if (!silent) {
+    spinner = new Spinner('dots', 'Creating TypeScript program...');
+    spinner.start();
+  }
   const program = createTsProgram(tsConfigPath);
   const sourceFiles = program
     .getSourceFiles()
     .filter((sf) => !sf.isDeclarationFile);
-  spinner.succeed(
-    `Created TypeScript program - analyzing ${sourceFiles.length} source files`
-  );
+  if (!silent) {
+    spinner!.succeed(
+      `Created TypeScript program - analyzing ${sourceFiles.length} source files`
+    );
+  }
 
   // Build call graph
-  spinner = new Spinner('dots', 'Building call graph from source files...');
-  spinner.start();
+  if (!silent) {
+    spinner = new Spinner('dots', 'Building call graph from source files...');
+    spinner.start();
+  }
   const callGraph = buildCallGraph(program);
   const functionCount = callGraph.size;
-  spinner.succeed(`Built call graph - discovered ${functionCount} functions`);
+  if (!silent) {
+    spinner!.succeed(
+      `Built call graph - discovered ${functionCount} functions`
+    );
+  }
 
   // Find changed functions
-  spinner = new Spinner('dots', 'Identifying changed functions...');
-  spinner.start();
+  if (!silent) {
+    spinner = new Spinner('dots', 'Identifying changed functions...');
+    spinner.start();
+  }
   const changedFunctions = findChangedFunctions(callGraph, changedLinesByFile);
   const changedFuncCount = Array.from(changedFunctions.values()).reduce(
     (total, funcSet) => total + funcSet.size,
     0
   );
-  spinner.succeed(
-    `Analysis complete - ${changedFuncCount} changed function${
-      changedFuncCount !== 1 ? 's' : ''
-    } identified`
-  );
+  if (!silent) {
+    spinner!.succeed(
+      `Analysis complete - ${changedFuncCount} changed function${
+        changedFuncCount !== 1 ? 's' : ''
+      } identified`
+    );
+  }
 
   const result: AnalysisResult = {
     changedFiles: Array.from(changedLinesByFile.keys()),
@@ -76,17 +95,23 @@ function performAnalysis(
   // Variable tracking (if enabled)
   if (includeVariables) {
     // Build variable graph
-    spinner = new Spinner('dots', 'Building variable dependency graph...');
-    spinner.start();
+    if (!silent) {
+      spinner = new Spinner('dots', 'Building variable dependency graph...');
+      spinner.start();
+    }
     const variableGraph = buildVariableGraph(program);
     const variableCount = variableGraph.size;
-    spinner.succeed(
-      `Built variable graph - discovered ${variableCount} variables`
-    );
+    if (!silent) {
+      spinner!.succeed(
+        `Built variable graph - discovered ${variableCount} variables`
+      );
+    }
 
     // Find changed variables
-    spinner = new Spinner('dots', 'Identifying changed variables...');
-    spinner.start();
+    if (!silent) {
+      spinner = new Spinner('dots', 'Identifying changed variables...');
+      spinner.start();
+    }
     const changedVariables = findChangedVariables(
       variableGraph,
       changedLinesByFile
@@ -95,11 +120,13 @@ function performAnalysis(
       (total, varSet) => total + varSet.size,
       0
     );
-    spinner.succeed(
-      `Variable analysis complete - ${changedVarCount} changed variable${
-        changedVarCount !== 1 ? 's' : ''
-      } identified`
-    );
+    if (!silent) {
+      spinner!.succeed(
+        `Variable analysis complete - ${changedVarCount} changed variable${
+          changedVarCount !== 1 ? 's' : ''
+        } identified`
+      );
+    }
 
     result.variableGraph = variableGraph;
     result.changedVariables = changedVariables;
@@ -121,30 +148,61 @@ function analyzeProject(
   includeVariables: boolean = true
 ): void {
   let spinner: Spinner | undefined;
+  const isJsonFormat = format.toLowerCase() === 'json';
 
   try {
-    // Initial header
-    console.log('\n🚀 DepWalker - TypeScript Dependency Analysis\n');
+    // Initial header (suppress for JSON)
+    if (!isJsonFormat) {
+      console.log('\n🚀 DepWalker - TypeScript Dependency Analysis\n');
+    }
 
     // Fetch git diff
-    spinner = new Spinner('dots', 'Fetching git diff...');
-    spinner.start();
+    if (!isJsonFormat) {
+      spinner = new Spinner('dots', 'Fetching git diff...');
+      spinner.start();
+    }
     const diffOutput = getGitDiff();
 
     if (!diffOutput.trim()) {
-      spinner.info('No changes detected in git diff');
-      console.log('\n✅ No TypeScript files have changed.');
-      return;
+      if (isJsonFormat) {
+        // For JSON format, output empty result structure
+        const emptyResult = {
+          changedFiles: [],
+          analysis: {
+            maxDepth,
+            timestamp: new Date().toISOString(),
+            totalChangedFunctions: 0,
+            totalChangedVariables: 0,
+          },
+          functions: [],
+          variables: [],
+        };
+        console.log(JSON.stringify(emptyResult, null, 2));
+        return;
+      } else {
+        spinner!.info('No changes detected in git diff');
+        console.log('\n✅ No TypeScript files have changed.');
+        return;
+      }
     }
 
-    spinner.succeed('Git diff fetched successfully');
-    console.log(); // Add spacing before analysis
+    if (!isJsonFormat) {
+      spinner!.succeed('Git diff fetched successfully');
+      console.log(); // Add spacing before analysis
+    }
 
-    // Perform analysis with progress indicators
-    const result = performAnalysis(diffOutput, tsConfigPath, includeVariables);
+    // Perform analysis with progress indicators (silent for JSON)
+    const result = performAnalysis(
+      diffOutput,
+      tsConfigPath,
+      includeVariables,
+      isJsonFormat
+    );
 
-    // Add spacing before results
-    console.log();
+    // Add spacing before results (suppress for JSON)
+    if (!isJsonFormat) {
+      console.log();
+    }
 
     // Print results
     printAnalysisResults(
@@ -156,11 +214,23 @@ function analyzeProject(
       groupByFile
     );
   } catch (error) {
-    if (spinner) {
-      spinner.fail('Analysis failed');
+    if (isJsonFormat) {
+      // For JSON format, output error in JSON format to stderr
+      const errorResult = {
+        error: {
+          message: error instanceof Error ? error.message : String(error),
+          timestamp: new Date().toISOString(),
+        },
+      };
+      console.error(JSON.stringify(errorResult, null, 2));
+      process.exit(1);
+    } else {
+      if (spinner) {
+        spinner.fail('Analysis failed');
+      }
+      console.error('\n❌ Error during analysis:', error);
+      process.exit(1);
     }
-    console.error('\n❌ Error during analysis:', error);
-    process.exit(1);
   }
 }
 

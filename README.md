@@ -86,9 +86,12 @@ depwalker --depth 2 --tsconfig ./build/tsconfig.prod.json
 
 ```bash
 # Different output formats
-depwalker --format tree    # Default tree view
-depwalker --format list    # Flat list format
+depwalker --format tree    # Tree view format
+depwalker --format list    # Flat list format (default)
 depwalker --format json    # JSON output for programmatic use
+
+# JSON output with file redirection (clean, no console messages)
+depwalker --format json > analysis-report.json
 
 # Compact mode for large codebases (reduces duplicate references)
 depwalker --compact
@@ -98,6 +101,9 @@ depwalker --max-nodes 50
 
 # Disable file grouping (show each function separately)
 depwalker --no-file-grouping
+
+# Disable variable tracking (functions only)
+depwalker --no-variables
 
 # Combine all advanced options
 depwalker --depth 3 --format tree --compact --max-nodes 100 --tsconfig ./tsconfig.json
@@ -141,6 +147,54 @@ Then run before committing:
 
 ```bash
 npm run commit-check
+```
+
+### CI/CD Integration
+
+DepWalker's JSON output mode is designed for automated workflows and CI/CD pipelines. The JSON format produces clean output without any console messages, making it perfect for file redirection and processing.
+
+**Basic CI/CD Usage:**
+
+```bash
+# Generate analysis report
+depwalker --format json > analysis-report.json
+
+# Check if high-impact changes exist
+HIGH_IMPACT=$(depwalker --format json | jq '.functions[] | select(.dependentCount > 5) | length')
+if [ "$HIGH_IMPACT" -gt 0 ]; then
+  echo "⚠️  High-impact changes detected. Consider additional testing."
+fi
+
+# Extract only changed function names
+depwalker --format json | jq -r '.functions[].function'
+
+# Get files with variable changes
+depwalker --format json | jq -r '.variables[] | .file' | sort -u
+```
+
+**GitHub Actions Example:**
+
+```yaml
+name: Impact Analysis
+on: [pull_request]
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - name: Analyze Impact
+        run: |
+          npx depwalker --format json > impact.json
+          echo "## 📊 Impact Analysis" >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
+          cat impact.json >> $GITHUB_STEP_SUMMARY
+          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
 ```
 
 ### Example Output
@@ -231,16 +285,28 @@ Detected changes in these functions:
 
 #### JSON Format
 
+The JSON format produces clean output without any console messages, making it perfect for file redirection and programmatic use.
+
 ```bash
-# depwalker --format json
+# Save analysis to file
+depwalker --format json > analysis-report.json
+
+# Pipe to other tools
+depwalker --format json | jq '.functions[] | select(.dependentCount > 2)'
+```
+
+**Example JSON Output:**
+
+```json
 {
-  "changedFiles": ["src/components/Button.tsx", "src/utils/helpers.ts"],
+  "changedFiles": ["src/components/Button.tsx", "src/config/constants.ts"],
   "analysis": {
     "maxDepth": null,
-    "timestamp": "2024-08-09T19:47:14.235Z",
-    "totalChangedFunctions": 3
+    "timestamp": "2024-08-10T06:47:12.827Z",
+    "totalChangedFunctions": 2,
+    "totalChangedVariables": 1
   },
-  "changes": [
+  "functions": [
     {
       "file": "src/components/Button.tsx",
       "function": "handleClick",
@@ -250,8 +316,29 @@ Detected changes in these functions:
         { "file": "src/components/ButtonGroup.tsx", "function": "ButtonGroup" },
         { "file": "src/components/ButtonGroup.tsx", "function": "ActionButton" },
         { "file": "src/components/Toolbar.tsx", "function": "Toolbar" },
-        { "file": "src/layouts/MainLayout.tsx", "function": "MainLayout" },
-        { "file": "src/components/ActionPanel.tsx", "function": "ActionPanel" }
+        { "file": "src/layouts/MainLayout.tsx", "function": "MainLayout" }
+      ]
+    }
+  ],
+  "variables": [
+    {
+      "file": "src/config/constants.ts",
+      "variable": "API_BASE_URL",
+      "line": 5,
+      "type": "const",
+      "scope": "module",
+      "usageCount": 3,
+      "usedBy": [
+        {
+          "function": "fetchData",
+          "file": "src/utils/api.ts",
+          "usages": [{ "line": 15, "type": "read" }]
+        },
+        {
+          "function": "configureClient",
+          "file": "src/services/http.ts",
+          "usages": [{ "line": 8, "type": "read" }]
+        }
       ]
     }
   ]
@@ -350,8 +437,11 @@ depwalker --depth 5
 # Compact analysis for large codebases
 depwalker --compact --max-nodes 50
 
-# JSON output for CI/CD integration
+# JSON output for CI/CD integration (clean output, no console messages)
 depwalker --format json --depth 3 > impact-analysis.json
+
+# Analysis for specific scenarios
+depwalker --format json --no-variables > functions-only.json
 
 # Detailed analysis with custom config
 depwalker --format tree --tsconfig ./custom-tsconfig.json --no-file-grouping

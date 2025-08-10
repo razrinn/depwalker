@@ -109,6 +109,14 @@ export function printAnalysisResults(
     variableGraph,
   } = result;
 
+  const isJsonFormat = format.toLowerCase() === 'json';
+
+  // For JSON format, directly output JSON without any console messages
+  if (isJsonFormat) {
+    printJsonFormat(result, maxDepth);
+    return;
+  }
+
   if (changedFiles.length === 0) {
     console.log('✅ No TypeScript files have changed.');
     return;
@@ -129,7 +137,7 @@ export function printAnalysisResults(
     return;
   }
 
-  // Route to appropriate formatter
+  // Route to appropriate formatter (non-JSON only)
   switch (format.toLowerCase()) {
     case 'tree':
     default:
@@ -138,15 +146,10 @@ export function printAnalysisResults(
     case 'list':
       printListFormat(result, maxDepth);
       break;
-    case 'json':
-      printJsonFormat(result, maxDepth);
-      break;
   }
 
   // Always append summary for non-JSON formats
-  if (format.toLowerCase() !== 'json') {
-    printSummarySection(result, callGraph);
-  }
+  printSummarySection(result, callGraph);
 }
 
 /**
