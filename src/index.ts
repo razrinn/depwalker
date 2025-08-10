@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
+import { writeFileSync } from 'fs';
+import path from 'path';
 import packageJson from '../package.json' with { type: 'json' };
 import {
   getGitDiff,
@@ -154,6 +156,7 @@ interface AnalyzeProjectOptions {
   maxNodes?: number | null;
   groupByFile?: boolean;
   includeVariables?: boolean;
+  output?: string;
 }
 
 function analyzeProject(options: AnalyzeProjectOptions = {}): void {
@@ -164,19 +167,43 @@ function analyzeProject(options: AnalyzeProjectOptions = {}): void {
     compact = false,
     maxNodes = null,
     groupByFile = true,
-    includeVariables = true
+    includeVariables = true,
+    output = null
   } = options;
   let spinner: Spinner | undefined;
   const isJsonFormat = format.toLowerCase() === 'json';
+  const isHtmlFormat = format.toLowerCase() === 'html';
+  const isSilentFormat = isJsonFormat || isHtmlFormat;
+
+  // Prepare to capture output if needed
+  let capturedOutput = '';
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+  if (output) {
+    // Override console.log to capture output
+    console.log = (...args: any[]) => {
+      const message = args.map(arg => 
+        typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+      ).join(' ');
+      capturedOutput += message + '\n';
+      if (!isSilentFormat) {
+        originalConsoleLog(...args);
+      }
+    };
+    console.error = (...args: any[]) => {
+      originalConsoleError(...args);
+    };
+  }
 
   try {
-    // Initial header (suppress for JSON)
-    if (!isJsonFormat) {
+    // Initial header (suppress for silent formats)
+    if (!isSilentFormat) {
       console.log('\n🚀 DepWalker - TypeScript Dependency Analysis\n');
     }
 
     // Fetch git diff
-    if (!isJsonFormat) {
+    if (!isSilentFormat) {
       spinner = new Spinner('Fetching git diff...');
       spinner.start();
     }
@@ -198,6 +225,11 @@ function analyzeProject(options: AnalyzeProjectOptions = {}): void {
         };
         console.log(JSON.stringify(emptyResult, null, 2));
         return;
+      } else if (isHtmlFormat) {
+        // For HTML format, output empty HTML structure
+        const emptyHtml = generateEmptyHtml();
+        console.log(emptyHtml);
+        return;
       } else {
         spinner!.info('No changes detected in git diff');
         console.log('\n✅ No TypeScript files have changed.');
@@ -205,21 +237,21 @@ function analyzeProject(options: AnalyzeProjectOptions = {}): void {
       }
     }
 
-    if (!isJsonFormat) {
+    if (!isSilentFormat) {
       spinner!.succeed('Git diff fetched successfully');
       console.log(); // Add spacing before analysis
     }
 
-    // Perform analysis with progress indicators (silent for JSON)
+    // Perform analysis with progress indicators (silent for JSON/HTML)
     const result = performAnalysis({
       diffOutput,
       tsConfigPath,
       includeVariables,
-      silent: isJsonFormat
+      silent: isSilentFormat
     });
 
-    // Add spacing before results (suppress for JSON)
-    if (!isJsonFormat) {
+    // Add spacing before results (suppress for silent formats)
+    if (!isSilentFormat) {
       console.log();
     }
 
@@ -232,7 +264,31 @@ function analyzeProject(options: AnalyzeProjectOptions = {}): void {
       maxNodes,
       groupByFile
     });
+
+    // Save to file if output option is specified
+    if (output) {
+      // Restore original console.log
+      console.log = originalConsoleLog;
+      console.error = originalConsoleError;
+
+      try {
+        const outputPath = path.resolve(output);
+        writeFileSync(outputPath, capturedOutput, 'utf-8');
+        if (!isSilentFormat) {
+          console.log(`\n✅ Results saved to: ${outputPath}`);
+        }
+      } catch (writeError) {
+        console.error(`\n❌ Failed to write output file: ${writeError}`);
+        process.exit(1);
+      }
+    }
   } catch (error) {
+    // Restore console functions if they were overridden
+    if (output) {
+      console.log = originalConsoleLog;
+      console.error = originalConsoleError;
+    }
+
     if (isJsonFormat) {
       // For JSON format, output error in JSON format to stderr
       const errorResult = {
@@ -243,6 +299,11 @@ function analyzeProject(options: AnalyzeProjectOptions = {}): void {
       };
       console.error(JSON.stringify(errorResult, null, 2));
       process.exit(1);
+    } else if (isHtmlFormat) {
+      // For HTML format, output error in HTML
+      const errorHtml = generateErrorHtml(error instanceof Error ? error.message : String(error));
+      console.log(errorHtml);
+      process.exit(1);
     } else {
       if (spinner) {
         spinner.fail('Analysis failed');
@@ -251,6 +312,54 @@ function analyzeProject(options: AnalyzeProjectOptions = {}): void {
       process.exit(1);
     }
   }
+}
+
+// Helper function to generate empty HTML
+function generateEmptyHtml(): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DepWalker - No Changes</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .no-changes { color: #666; font-size: 18px; text-align: center; padding: 40px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 DepWalker Analysis</h1>
+        <div class="no-changes">✅ No TypeScript files have changed.</div>
+    </div>
+</body>
+</html>`;
+}
+
+// Helper function to generate error HTML
+function generateErrorHtml(errorMessage: string): string {
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DepWalker - Error</title>
+    <style>
+        body { font-family: system-ui, -apple-system, sans-serif; padding: 40px; background: #f5f5f5; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        h1 { color: #333; }
+        .error { color: #d32f2f; font-size: 16px; padding: 20px; background: #ffebee; border-radius: 4px; border-left: 4px solid #d32f2f; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>❌ DepWalker Analysis Error</h1>
+        <div class="error">${errorMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>
+    </div>
+</body>
+</html>`;
 }
 
 // Setup Commander CLI
@@ -278,7 +387,7 @@ cli
   )
   .option(
     '-f, --format <type>',
-    'Output format: list (default), tree, json (summary appended to all formats)',
+    'Output format: list (default), tree, json, html (summary appended to all text formats)',
     'list'
   )
   .option(
@@ -304,6 +413,10 @@ cli
     '--no-variables',
     'Disable variable change tracking and impact analysis'
   )
+  .option(
+    '-o, --output <file>',
+    'Save output to a file instead of printing to stdout'
+  )
   .action((options) => {
     analyzeProject({
       maxDepth: options.depth || null,
@@ -312,7 +425,8 @@ cli
       compact: options.compact || false,
       maxNodes: options.maxNodes || null,
       groupByFile: options.fileGrouping !== false, // Default to true unless --no-file-grouping is used
-      includeVariables: !options.noVariables // Default to true unless --no-variables is used
+      includeVariables: !options.noVariables, // Default to true unless --no-variables is used
+      output: options.output || null
     });
   });
 
