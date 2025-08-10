@@ -7,29 +7,12 @@ A comprehensive TypeScript-based dependency analysis tool that tracks the impact
 
 ## 🎯 Use Cases
 
-### Function & Component Analysis
-
-- **Pre-commit Code Review**: See which parts of your codebase are affected by your changes before committing
-- **Impact Analysis**: Understand the ripple effects of modifying a function or component
-- **Test Planning**: Identify which components need testing after making changes
-- **Refactoring Safety**: Verify the scope of impact when refactoring shared utilities or components
-- **Code Review Assistance**: Help reviewers understand the full context of your changes
-- **Breaking Change Detection**: Discover unexpected dependencies on functions you're modifying
-- **React Component Changes**: Track which components are affected when updating shared hooks or context
-
-### Variable & Configuration Analysis
-
-- **Configuration Changes**: Track which functions are affected when modifying configuration variables, constants, or imports
-- **Variable Usage Tracking**: See all read/write/reference patterns for changed variables across your codebase
-- **Constant Impact Analysis**: Understand how changing constants or configuration objects affects dependent code
-- **Import/Export Analysis**: Track the impact of changes to imported/exported variables and modules
-
-### Advanced Analysis Features
-
-- **Large Codebase Navigation**: Use depth limits to focus on immediate dependencies in complex projects
-- **Circular Dependency Discovery**: Identify problematic circular references while analyzing impact
-- **Multi-format Output**: Generate reports in tree, list, or JSON format for different use cases
-- **Documentation**: Generate dependency information for architecture documentation
+- **Impact Analysis**: Understand which functions and components are affected by your changes
+- **Pre-commit Review**: See the scope of impact before committing changes
+- **Test Planning**: Identify which parts need testing after modifications
+- **Refactoring Safety**: Verify dependencies when refactoring shared code
+- **Configuration Changes**: Track how variable/constant changes affect dependent code
+- **Large Codebases**: Use depth limits and filters for focused analysis in complex projects
 
 ## 📦 Installation
 
@@ -91,65 +74,32 @@ depwalker --depth 2 --tsconfig ./build/tsconfig.prod.json
 ### Advanced Usage
 
 ```bash
-# Different output formats
-depwalker --format tree    # Tree view format
-depwalker --format list    # Flat list format (default)
-depwalker --format json    # JSON output for programmatic use
+# Output formats
+depwalker --format tree    # Tree view
+depwalker --format json    # JSON for CI/CD
 
-# JSON output with file redirection (clean, no console messages)
-depwalker --format json > analysis-report.json
+# Large codebase options
+depwalker --compact --max-nodes 50
+depwalker --no-variables   # Functions only
 
-# Compact mode for large codebases (reduces duplicate references)
-depwalker --compact
-
-# Limit total nodes to prevent overwhelming output
-depwalker --max-nodes 50
-
-# Disable file grouping (show each function separately)
-depwalker --no-file-grouping
-
-# Disable variable tracking (functions only)
-depwalker --no-variables
-
-# Combine all advanced options
-depwalker --depth 3 --format tree --compact --max-nodes 100 --tsconfig ./tsconfig.json
+# Combined options
+depwalker --depth 3 --format tree --compact --tsconfig ./tsconfig.json
 ```
 
 ### Pre-commit Integration
-
-Add DepWalker to your pre-commit workflow to analyze impact before committing:
-
-**Option 1: Git Hook**
-
-Create `.git/hooks/pre-commit`:
-
-```bash
-#!/bin/sh
-echo "🔍 Analyzing dependency impact..."
-npx depwalker --depth 3 --tsconfig ./tsconfig.json
-echo "\n✅ Review the impact above before proceeding with commit."
-read -p "Continue with commit? (y/N): " -n 1 -r
-echo
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-    echo "❌ Commit cancelled."
-    exit 1
-fi
-```
-
-**Option 2: Package.json Script**
 
 Add to your `package.json`:
 
 ```json
 {
   "scripts": {
-    "pre-commit": "depwalker --depth 3 --tsconfig ./tsconfig.json",
+    "pre-commit": "depwalker --depth 3",
     "commit-check": "npm run pre-commit && echo 'Ready to commit!'"
   }
 }
 ```
 
-Then run before committing:
+Run before committing:
 
 ```bash
 npm run commit-check
@@ -205,199 +155,37 @@ jobs:
 
 ### Example Output
 
-#### Tree Format (Default)
+**Tree Format:**
 
 ```
 🚀 DepWalker - TypeScript Dependency Analysis
-
-✓ Git diff fetched successfully
-✓ Parsed git diff - found 2 changed TypeScript files
-✓ Created TypeScript program - analyzing 847 source files
-✓ Built call graph - discovered 1,204 functions
 ✓ Analysis complete - 3 changed functions identified
 
-🔍 Changed files: .../components/Button.tsx, .../utils/helpers.ts
-
----
-Detected changes in these functions:
-  In src/components/Button.tsx:
-    - handleClick
-    - validateInput
-  In src/utils/helpers.ts:
-    - formatDate
-
-💥 Dependency Walker Analysis 💥
-[Compact mode, Max depth 3, File grouping]
-
-📁 Changes in: src/components/Button.tsx
-==================================================
-
 🎯 Change Source: handleClick (line ~23)
---------------------------------------------------
-    ├── ButtonGroup, ActionButton in src/components/ButtonGroup.tsx (lines ~45, 67)
-    │   └── Toolbar in src/components/Toolbar.tsx (line ~12)
-    │       └── MainLayout in src/layouts/MainLayout.tsx (line ~78)
-    └── ActionPanel in src/components/ActionPanel.tsx (line ~34)
-        └── (Reference to Toolbar - 3 callers)
-
-🎯 Change Source: validateInput (line ~15)
---------------------------------------------------
-    └── No external callers found in the project.
-
-📊 Impact Summary:
-
-• Changed files: 2
-• Changed functions: 3
-
-📈 Impact Distribution:
-• High impact (6+ dependents): 0
-• Medium impact (3-5 dependents): 1
-• Low impact (1-2 dependents): 1
-• No impact (0 dependents): 1
-
-🎯 Top Impacted Functions:
-  1. handleClick in .../components/Button.tsx (4 dependents)
-  2. formatDate in .../utils/helpers.ts (2 dependents)
-  3. validateInput in .../components/Button.tsx (0 dependents)
+    ├── ButtonGroup in src/components/ButtonGroup.tsx
+    └── Toolbar in src/components/Toolbar.tsx
+        └── MainLayout in src/layouts/MainLayout.tsx
 ```
 
-#### List Format
+**JSON Format** (for CI/CD):
 
 ```bash
-# depwalker --format list
-📋 Changed Functions and Their Dependencies:
-
-📁 src/components/Button.tsx:
-
-  🔸 handleClick (line ~23)
-    1. ButtonGroup in .../components/ButtonGroup.tsx
-    2. ActionButton in .../components/ButtonGroup.tsx
-    3. Toolbar in .../components/Toolbar.tsx
-    4. MainLayout in .../layouts/MainLayout.tsx
-    5. ActionPanel in .../components/ActionPanel.tsx
-
-  🔸 validateInput (line ~15)
-    • No dependencies found
-
-📦 Changed Variables and Their Usage:
-
-📁 src/config/constants.ts:
-
-  📦 API_BASE_URL (const) (line ~5)
-    1. fetchData in src/utils/api.ts (line ~15) (2 reads)
-    2. configureClient in src/services/http.ts (line ~8) (1 read)
-    3. setupEnvironment in src/config/env.ts (line ~12) (1 read, 1 ref)
-```
-
-#### JSON Format
-
-The JSON format produces clean output without any console messages, making it perfect for file redirection and programmatic use.
-
-```bash
-# Save analysis to file
 depwalker --format json > analysis-report.json
-
-# Pipe to other tools
-depwalker --format json | jq '.functions[] | select(.dependentCount > 2)'
 ```
 
-**Example JSON Output:**
+## 🧪 Testing
 
-```json
-{
-  "changedFiles": ["src/components/Button.tsx", "src/config/constants.ts"],
-  "analysis": {
-    "maxDepth": null,
-    "timestamp": "2024-08-10T06:47:12.827Z",
-    "totalChangedFunctions": 2,
-    "totalChangedVariables": 1
-  },
-  "functions": [
-    {
-      "file": "src/components/Button.tsx",
-      "function": "handleClick",
-      "line": 23,
-      "dependentCount": 4,
-      "dependents": [
-        { "file": "src/components/ButtonGroup.tsx", "function": "ButtonGroup" },
-        {
-          "file": "src/components/ButtonGroup.tsx",
-          "function": "ActionButton"
-        },
-        { "file": "src/components/Toolbar.tsx", "function": "Toolbar" },
-        { "file": "src/layouts/MainLayout.tsx", "function": "MainLayout" }
-      ]
-    }
-  ],
-  "variables": [
-    {
-      "file": "src/config/constants.ts",
-      "variable": "API_BASE_URL",
-      "line": 5,
-      "type": "const",
-      "scope": "module",
-      "usageCount": 3,
-      "usedBy": [
-        {
-          "function": "fetchData",
-          "file": "src/utils/api.ts",
-          "usages": [{ "line": 15, "type": "read" }]
-        },
-        {
-          "function": "configureClient",
-          "file": "src/services/http.ts",
-          "usages": [{ "line": 8, "type": "read" }]
-        }
-      ]
-    }
-  ]
-}
-```
-
-## 🧪 Testing {#testing}
-
-DepWalker has a comprehensive test suite covering unit tests for core functionality and integration tests for end-to-end scenarios.
-
-### Running Tests
+Comprehensive test suite with **Vitest** and 70% minimum coverage thresholds.
 
 ```bash
-# Run all tests
+# Run tests
 pnpm test
-
-# Run tests in watch mode
 pnpm test:watch
-
-# Run tests with coverage report
 pnpm test:coverage
-
-# Run tests with UI interface
 pnpm test:ui
-
-# Run tests once (non-interactive)
-pnpm test:run
 ```
 
-### Coverage Thresholds
-
-The project maintains high test coverage with the following minimum thresholds:
-
-- **Branches**: 70%
-- **Functions**: 70%
-- **Lines**: 70%
-- **Statements**: 70%
-
-### Test Structure
-
-```
-test/
-├── fixtures/           # Test data and sample files
-├── integration/        # End-to-end integration tests
-├── unit/              # Unit tests for individual modules
-│   ├── git-parser.test.ts
-│   ├── ui.test.ts
-│   └── utils.test.ts
-└── setup.ts           # Test setup and configuration
-```
+**Test Coverage:** 44 tests (37 unit + 7 integration) covering git parsing, UI components, and analysis pipeline.
 
 ## 🛠️ Development
 
@@ -426,117 +214,35 @@ depwalker/
 
 ## 🏗️ How It Works
 
-1. **Git Diff Analysis**: DepWalker starts by running `git diff -U0 HEAD` to get all uncommitted changes in your repository.
-
-2. **Parse Changed Lines**: It parses the diff output to identify which TypeScript files have changes and exactly which lines were modified.
-
-3. **Build Dependency Graphs**: Using the TypeScript Compiler API, it builds two main graphs:
-
-   **Function Call Graph:**
-
-   - Parses all TypeScript files in your project
-   - Identifies all function declarations and variable declarations that contain functions
-   - Tracks all function calls and JSX component usage
-   - Builds a complete call graph with line number information
-   - Handles React patterns like `React.memo()` and dynamic imports
-   - Tracks JSX component usage and dependencies
-
-   **Variable Usage Graph:**
-
-   - Identifies all variable declarations (const, let, var, imports, parameters)
-   - Tracks variable usage patterns (read, write, reference)
-   - Maps variable usage to specific functions and line numbers
-   - Handles different variable scopes (global, module, function, block)
-   - Tracks import/export relationships and their usage
-
-4. **Impact Analysis**: For each changed item, it performs dual analysis:
-
-   - **Function Impact**: Traverses the call graph to find all functions that depend on changed functions
-   - **Variable Impact**: Identifies all functions that use changed variables and analyzes their dependencies
-
-5. **Smart Output**: Presents results with intelligent formatting:
-   - **Dual Analysis Display**: Shows both function and variable changes with their respective impacts
-   - **File Grouping**: Groups multiple functions from the same file
-   - **Usage Type Classification**: Distinguishes between read, write, and reference operations for variables
-   - **Circular Reference Detection**: Identifies and handles circular dependencies
-   - **Progress Indicators**: Shows real-time progress with spinners
-   - **Impact Statistics**: Provides summary metrics for both functions and variables
+1. **Git Analysis**: Fetches uncommitted changes via `git diff`
+2. **TypeScript Parsing**: Uses TypeScript Compiler API to build function call and variable usage graphs
+3. **Impact Analysis**: Traverses dependency graphs to find affected functions and variables
+4. **Smart Output**: Presents results with file grouping, circular reference detection, and impact statistics
 
 ## 🔧 Configuration
 
-DepWalker uses your project's `tsconfig.json` file for TypeScript compilation settings. Make sure your `tsconfig.json` is properly configured for your project.
-
 ### Command Line Options
 
-#### Core Options
+**Core Options:**
 
-- **`-d, --depth <number>`**: Maximum depth for dependency analysis. Useful for limiting the scope in large codebases.
-- **`-t, --tsconfig <path>`**: Path to the TypeScript configuration file (default: `./tsconfig.json`).
+- `-d, --depth <number>` - Maximum analysis depth. Default: no limit
+- `-t, --tsconfig <path>` - TypeScript config file path. Default: ./tsconfig.json
+- `-f, --format <type>` - Output format: `list`, `tree`, `json`. Default: `list`
 
-#### Output Format Options
+**Display Options:**
 
-- **`-f, --format <type>`**: Output format - `list` (default), `tree`, or `json`
-  - `list`: Flat list of dependencies (default)
-  - `tree`: Hierarchical tree view
-  - `json`: JSON output for programmatic use
+- `--compact` - Reduce duplicate references
+- `--max-nodes <number>` - Limit total output nodes
+- `--no-file-grouping` - Show functions separately
+- `--no-variables` - Functions only, skip variables
 
-#### Display Control Options
-
-- **`-c, --compact`**: Enable compact mode - reduces duplicate references and limits callers per function. Useful for large codebases.
-- **`--max-nodes <number>`**: Maximum total nodes to display in the entire tree. Prevents overwhelming output on very large dependency chains.
-- **`--no-file-grouping`**: Disable grouping of multiple functions from the same file. Shows each function separately instead of grouping them.
-- **`--no-variables`**: Disable variable change tracking and impact analysis. Focus only on function dependencies.
-
-#### Examples
+**Examples:**
 
 ```bash
-# Basic analysis with depth limit
-depwalker --depth 5
-
-# Compact analysis for large codebases
-depwalker --compact --max-nodes 50
-
-# JSON output for CI/CD integration (clean output, no console messages)
-depwalker --format json --depth 3 > impact-analysis.json
-
-# Analysis for specific scenarios
-depwalker --format json --no-variables > functions-only.json
-
-# Detailed analysis with custom config
-depwalker --format tree --tsconfig ./custom-tsconfig.json --no-file-grouping
-
-# Conservative analysis for huge codebases
-depwalker --compact --depth 2 --max-nodes 25 --format list
-```
-
-### Custom TypeScript Configuration
-
-The `--tsconfig` option is particularly useful in these scenarios:
-
-- **Multiple tsconfig files**: Use production, development, or test-specific configurations
-- **Monorepo setup**: Point to specific package configurations
-- **Custom build directories**: When your tsconfig is in a different location
-- **CI/CD environments**: Use optimized configurations for analysis
-
-```bash
-# Use production configuration
+depwalker --depth 3 --compact
+depwalker --format json > report.json
 depwalker --tsconfig ./tsconfig.prod.json
-
-# Point to a different directory
-depwalker --tsconfig ../config/tsconfig.analysis.json
-
-# Monorepo package-specific analysis
-depwalker --tsconfig ./packages/core/tsconfig.json
 ```
-
-### TypeScript Config Requirements
-
-Your `tsconfig.json` should include:
-
-- Proper `include` and `exclude` paths
-- Module resolution settings
-- Target and lib configurations
-- Correct `baseUrl` and `paths` for module resolution
 
 ## 🤝 Contributing
 
