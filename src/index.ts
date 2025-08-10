@@ -109,7 +109,14 @@ function analyzeProject(
     console.log();
 
     // Print results
-    printAnalysisResults(result, maxDepth, format, compact, maxNodes, groupByFile);
+    printAnalysisResults(
+      result,
+      maxDepth,
+      format,
+      compact,
+      maxNodes,
+      groupByFile
+    );
   } catch (error) {
     if (spinner) {
       spinner.fail('Analysis failed');
@@ -144,8 +151,8 @@ cli
   )
   .option(
     '-f, --format <type>',
-    'Output format: tree (default), list, json (summary appended to all formats)',
-    'tree'
+    'Output format: list (default), tree, json (summary appended to all formats)',
+    'list'
   )
   .option(
     '-c, --compact',
@@ -168,8 +175,8 @@ cli
   )
   .action((options) => {
     analyzeProject(
-      options.depth || null, 
-      options.tsconfig, 
+      options.depth || null,
+      options.tsconfig,
       options.format,
       options.compact || false,
       options.maxNodes || null,

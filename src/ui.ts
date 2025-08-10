@@ -2,6 +2,20 @@ import spinners from 'cli-spinners';
 import { AnalysisResult, generateImpactTree, truncatePath } from './analyzer';
 
 /**
+ * Centralized color configuration using original tree format colors
+ */
+const COLORS = {
+  reset: '\x1b[0m',
+  bright: '\x1b[1m',
+  dim: '\x1b[2m',
+  yellow: '\x1b[33m',
+  cyan: '\x1b[36m',
+  magenta: '\x1b[35m',
+  green: '\x1b[32m',
+  red: '\x1b[31m',
+} as const;
+
+/**
  * Simple spinner implementation for CLI progress indication
  */
 export class Spinner {
@@ -22,29 +36,29 @@ export class Spinner {
     process.stdout.write('\x1B[?25l'); // Hide cursor
     this.spinner = setInterval(() => {
       const frame = this.frames[this.currentFrame];
-      process.stdout.write(`\r\x1b[36m${frame}\x1b[0m ${this.text}`);
+      process.stdout.write(`\r${COLORS.cyan}${frame}${COLORS.reset} ${this.text}`);
       this.currentFrame = (this.currentFrame + 1) % this.frames.length;
     }, this.interval);
   }
 
   succeed(text?: string): void {
     this.stop();
-    process.stdout.write(`\r\x1b[32m✓\x1b[0m ${text || this.text}\n`);
+    process.stdout.write(`\r${COLORS.green}✓${COLORS.reset} ${text || this.text}\n`);
   }
 
   fail(text?: string): void {
     this.stop();
-    process.stdout.write(`\r\x1b[31m✗\x1b[0m ${text || this.text}\n`);
+    process.stdout.write(`\r${COLORS.red}✗${COLORS.reset} ${text || this.text}\n`);
   }
 
   warn(text?: string): void {
     this.stop();
-    process.stdout.write(`\r\x1b[33m⚠\x1b[0m ${text || this.text}\n`);
+    process.stdout.write(`\r${COLORS.yellow}⚠${COLORS.reset} ${text || this.text}\n`);
   }
 
   info(text?: string): void {
     this.stop();
-    process.stdout.write(`\r\x1b[36mℹ\x1b[0m ${text || this.text}\n`);
+    process.stdout.write(`\r${COLORS.cyan}ℹ${COLORS.reset} ${text || this.text}\n`);
   }
 
   stop(): void {
@@ -122,14 +136,7 @@ function printTreeFormat(
   maxNodes: number | null = null,
   groupByFile: boolean = true
 ): void {
-  const colors = {
-    reset: '\x1b[0m',
-    bright: '\x1b[1m',
-    dim: '\x1b[2m',
-    yellow: '\x1b[33m',
-    cyan: '\x1b[36m',
-    magenta: '\x1b[35m',
-  };
+  const colors = COLORS;
 
   // Global visited tracker to avoid duplicate expansions across the entire analysis
   const globalVisited = new Set<string>();
@@ -255,10 +262,12 @@ function printListFormat(
   callGraph: any,
   maxDepth: number | null
 ): void {
-  console.log('\n📋 Changed Functions and Their Dependencies:\n');
+  const colors = COLORS;
+
+  console.log(`\n${colors.bright}📋 Changed Functions and Their Dependencies:${colors.reset}\n`);
   
   for (const [filePath, functionIds] of changedFunctions.entries()) {
-    console.log(`\n📁 ${truncatePath(filePath)}:`);
+    console.log(`\n${colors.bright}${colors.cyan}📁 ${truncatePath(filePath)}:${colors.reset}`);
     
     for (const sourceFunctionId of functionIds) {
       const sourceParts = sourceFunctionId.split(':');
@@ -266,15 +275,19 @@ function printListFormat(
       const sourceNode = callGraph.get(sourceFunctionId);
       const defLine = sourceNode?.definition?.startLine;
       
-      console.log(`\n  🔸 ${sourceFunc} (line ~${defLine || '?'})`);
+      console.log(`\n  ${colors.yellow}🔸 ${colors.bright}${sourceFunc}${colors.reset} ${colors.dim}(line ~${defLine || '?'})${colors.reset}`);
       
       if (!sourceNode || sourceNode.callers.length === 0) {
-        console.log('    • No dependencies found');
+        console.log(`    ${colors.dim}• No dependencies found${colors.reset}`);
       } else {
         const allDependents = collectAllDependents(sourceFunctionId, callGraph, maxDepth);
         allDependents.forEach((dependent, index) => {
           const [depFile, depFunc] = dependent.split(':');
-          console.log(`    ${index + 1}. ${depFunc} in ${truncatePath(depFile || '')}`);
+          const dependentNode = callGraph.get(dependent);
+          const lineInfo = dependentNode?.definition?.startLine 
+            ? `${colors.dim}(line ~${dependentNode.definition.startLine})${colors.reset}` 
+            : '';
+          console.log(`    ${colors.green}${index + 1}.${colors.reset} ${colors.bright}${depFunc}${colors.reset} ${colors.dim}in${colors.reset} ${colors.cyan}${truncatePath(depFile || '')}${colors.reset} ${lineInfo}`);
         });
       }
     }
@@ -328,14 +341,16 @@ function printSummarySection(
   changedFunctions: Map<string, Set<string>>,
   callGraph: any
 ): void {
-  console.log('\n\n📊 Impact Summary:\n');
+  const colors = COLORS;
+
+  console.log(`\n\n${colors.bright}📊 Impact Summary:${colors.reset}\n`);
   
   const totalChanged = Array.from(changedFunctions.values())
     .reduce((total, funcSet) => total + funcSet.size, 0);
   const totalFiles = changedFunctions.size;
   
-  console.log(`• Changed files: ${totalFiles}`);
-  console.log(`• Changed functions: ${totalChanged}`);
+  console.log(`${colors.cyan}•${colors.reset} ${colors.bright}Changed files:${colors.reset} ${colors.green}${totalFiles}${colors.reset}`);
+  console.log(`${colors.cyan}•${colors.reset} ${colors.bright}Changed functions:${colors.reset} ${colors.green}${totalChanged}${colors.reset}`);
   
   // Calculate impact metrics
   const impactStats = { high: 0, medium: 0, low: 0, none: 0 };
@@ -350,11 +365,11 @@ function printSummarySection(
     }
   }
   
-  console.log(`\n📈 Impact Distribution:`);
-  console.log(`• High impact (6+ dependents): ${impactStats.high}`);
-  console.log(`• Medium impact (3-5 dependents): ${impactStats.medium}`);
-  console.log(`• Low impact (1-2 dependents): ${impactStats.low}`);
-  console.log(`• No impact (0 dependents): ${impactStats.none}`);
+  console.log(`\n${colors.bright}📈 Impact Distribution:${colors.reset}`);
+  console.log(`${colors.cyan}•${colors.reset} ${colors.bright}High impact${colors.reset} ${colors.dim}(6+ dependents):${colors.reset} ${colors.red}${impactStats.high}${colors.reset}`);
+  console.log(`${colors.cyan}•${colors.reset} ${colors.bright}Medium impact${colors.reset} ${colors.dim}(3-5 dependents):${colors.reset} ${colors.yellow}${impactStats.medium}${colors.reset}`);
+  console.log(`${colors.cyan}•${colors.reset} ${colors.bright}Low impact${colors.reset} ${colors.dim}(1-2 dependents):${colors.reset} ${colors.green}${impactStats.low}${colors.reset}`);
+  console.log(`${colors.cyan}•${colors.reset} ${colors.bright}No impact${colors.reset} ${colors.dim}(0 dependents):${colors.reset} ${colors.dim}${impactStats.none}${colors.reset}`);
   
   // Top impacted functions
   const impactList = [];
@@ -372,9 +387,11 @@ function printSummarySection(
     .slice(0, 5);
     
   if (topImpacted.length > 0) {
-    console.log(`\n🎯 Top Impacted Functions:`);
+    console.log(`\n${colors.bright}🎯 Top Impacted Functions:${colors.reset}`);
     topImpacted.forEach((item, index) => {
-      console.log(`  ${index + 1}. ${item.function} in ${truncatePath(item.file)} (${item.count} dependents)`);
+      const impactColor = item.count >= 6 ? colors.red : 
+                         item.count >= 3 ? colors.yellow : colors.green;
+      console.log(`  ${colors.cyan}${index + 1}.${colors.reset} ${colors.bright}${item.function}${colors.reset} ${colors.dim}in${colors.reset} ${colors.cyan}${truncatePath(item.file)}${colors.reset} ${colors.dim}(${colors.reset}${impactColor}${item.count}${colors.reset} ${colors.dim}dependents)${colors.reset}`);
     });
   }
 }
