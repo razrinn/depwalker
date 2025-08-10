@@ -16,7 +16,7 @@ A comprehensive TypeScript-based dependency analysis tool that tracks the impact
 
 ## 📦 Installation
 
-**Prerequisites:** Node.js (v16+) and Git
+**Prerequisites:** Node.js (v20+) and Git
 
 ### Quick Start (Recommended)
 
@@ -143,7 +143,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '18'
+          node-version: '20'
       - name: Analyze Impact
         run: |
           npx depwalker --format json > impact.json
