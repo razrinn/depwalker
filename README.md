@@ -1,10 +1,14 @@
 # 🚶‍♂️ DepWalker
 
+[![Coverage](https://codecov.io/gh/razrinn/depwalker/branch/main/graph/badge.svg)](https://codecov.io/gh/razrinn/depwalker)
+[![Tests](https://github.com/razrinn/depwalker/actions/workflows/test.yml/badge.svg)](https://github.com/razrinn/depwalker/actions/workflows/test.yml)
+
 A comprehensive TypeScript-based dependency analysis tool that tracks the impact of code changes across your codebase. DepWalker analyzes your Git changes and shows you which functions and variables are affected, along with their dependency chains and usage patterns.
 
 ## 🎯 Use Cases
 
 ### Function & Component Analysis
+
 - **Pre-commit Code Review**: See which parts of your codebase are affected by your changes before committing
 - **Impact Analysis**: Understand the ripple effects of modifying a function or component
 - **Test Planning**: Identify which components need testing after making changes
@@ -14,12 +18,14 @@ A comprehensive TypeScript-based dependency analysis tool that tracks the impact
 - **React Component Changes**: Track which components are affected when updating shared hooks or context
 
 ### Variable & Configuration Analysis
+
 - **Configuration Changes**: Track which functions are affected when modifying configuration variables, constants, or imports
 - **Variable Usage Tracking**: See all read/write/reference patterns for changed variables across your codebase
 - **Constant Impact Analysis**: Understand how changing constants or configuration objects affects dependent code
 - **Import/Export Analysis**: Track the impact of changes to imported/exported variables and modules
 
 ### Advanced Analysis Features
+
 - **Large Codebase Navigation**: Use depth limits to focus on immediate dependencies in complex projects
 - **Circular Dependency Discovery**: Identify problematic circular references while analyzing impact
 - **Multi-format Output**: Generate reports in tree, list, or JSON format for different use cases
@@ -314,7 +320,10 @@ depwalker --format json | jq '.functions[] | select(.dependentCount > 2)'
       "dependentCount": 4,
       "dependents": [
         { "file": "src/components/ButtonGroup.tsx", "function": "ButtonGroup" },
-        { "file": "src/components/ButtonGroup.tsx", "function": "ActionButton" },
+        {
+          "file": "src/components/ButtonGroup.tsx",
+          "function": "ActionButton"
+        },
         { "file": "src/components/Toolbar.tsx", "function": "Toolbar" },
         { "file": "src/layouts/MainLayout.tsx", "function": "MainLayout" }
       ]
@@ -345,13 +354,60 @@ depwalker --format json | jq '.functions[] | select(.dependentCount > 2)'
 }
 ```
 
+## 🧪 Testing {#testing}
+
+DepWalker has a comprehensive test suite covering unit tests for core functionality and integration tests for end-to-end scenarios.
+
+### Running Tests
+
+```bash
+# Run all tests
+pnpm test
+
+# Run tests in watch mode
+pnpm test:watch
+
+# Run tests with coverage report
+pnpm test:coverage
+
+# Run tests with UI interface
+pnpm test:ui
+
+# Run tests once (non-interactive)
+pnpm test:run
+```
+
+### Coverage Thresholds
+
+The project maintains high test coverage with the following minimum thresholds:
+
+- **Branches**: 70%
+- **Functions**: 70%
+- **Lines**: 70%
+- **Statements**: 70%
+
+### Test Structure
+
+```
+test/
+├── fixtures/           # Test data and sample files
+├── integration/        # End-to-end integration tests
+├── unit/              # Unit tests for individual modules
+│   ├── git-parser.test.ts
+│   ├── ui.test.ts
+│   └── utils.test.ts
+└── setup.ts           # Test setup and configuration
+```
+
 ## 🛠️ Development
 
 ### Available Scripts
 
 - `pnpm dev` - Watch mode for development (recompiles on changes)
 - `pnpm build` - Build the project for production
-- `pnpm test` - Run tests (currently not implemented)
+- `pnpm test` - Run tests with Vitest
+- `pnpm test:coverage` - Run tests with coverage report
+- `pnpm test:watch` - Run tests in watch mode
 
 ### Project Structure
 
@@ -377,6 +433,7 @@ depwalker/
 3. **Build Dependency Graphs**: Using the TypeScript Compiler API, it builds two main graphs:
 
    **Function Call Graph:**
+
    - Parses all TypeScript files in your project
    - Identifies all function declarations and variable declarations that contain functions
    - Tracks all function calls and JSX component usage
@@ -385,6 +442,7 @@ depwalker/
    - Tracks JSX component usage and dependencies
 
    **Variable Usage Graph:**
+
    - Identifies all variable declarations (const, let, var, imports, parameters)
    - Tracks variable usage patterns (read, write, reference)
    - Maps variable usage to specific functions and line numbers
@@ -392,6 +450,7 @@ depwalker/
    - Tracks import/export relationships and their usage
 
 4. **Impact Analysis**: For each changed item, it performs dual analysis:
+
    - **Function Impact**: Traverses the call graph to find all functions that depend on changed functions
    - **Variable Impact**: Identifies all functions that use changed variables and analyzes their dependencies
 

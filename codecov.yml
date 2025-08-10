@@ -1,0 +1,22 @@
+coverage:
+  status:
+    project:
+      default:
+        target: 70%
+        threshold: 2%
+    patch:
+      default:
+        target: 70%
+
+comment:
+  layout: "reach,diff,flags,tree"
+  behavior: default
+  require_changes: false
+
+ignore:
+  - "dist/"
+  - "coverage/"
+  - "test/"
+  - "**/*.d.ts"
+  - "vitest.config.ts"
+  - "src/index.ts"  # CLI entry point

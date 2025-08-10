@@ -13,11 +13,10 @@
     "dev": "tsc -w",
     "build": "rm -rf dist && tsc",
     "depwalker": "node dist/index.js",
-    "test": "vitest",
+    "test": "vitest --run",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage",
-    "test:run": "vitest run"
+    "test:coverage": "vitest --coverage --run"
   },
   "keywords": [
     "typescript",
