@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.1.3
+
+### Patch Changes
+
+- 1879555: add html output format
+
 ## 0.1.2
 
 ### Patch Changes
