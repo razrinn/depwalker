@@ -7,7 +7,9 @@ import {
   parseGitDiff,
   createTsProgram,
   buildCallGraph,
+  buildVariableGraph,
   findChangedFunctions,
+  findChangedVariables,
   AnalysisResult,
 } from './analyzer';
 import { printAnalysisResults, Spinner } from './ui';
@@ -17,7 +19,8 @@ import { printAnalysisResults, Spinner } from './ui';
  */
 function performAnalysis(
   diffOutput: string,
-  tsConfigPath = './tsconfig.json'
+  tsConfigPath = './tsconfig.json',
+  includeVariables = true
 ): AnalysisResult {
   let spinner: Spinner;
 
@@ -64,11 +67,45 @@ function performAnalysis(
     } identified`
   );
 
-  return {
+  const result: AnalysisResult = {
     changedFiles: Array.from(changedLinesByFile.keys()),
     changedFunctions,
     callGraph,
   };
+
+  // Variable tracking (if enabled)
+  if (includeVariables) {
+    // Build variable graph
+    spinner = new Spinner('dots', 'Building variable dependency graph...');
+    spinner.start();
+    const variableGraph = buildVariableGraph(program);
+    const variableCount = variableGraph.size;
+    spinner.succeed(
+      `Built variable graph - discovered ${variableCount} variables`
+    );
+
+    // Find changed variables
+    spinner = new Spinner('dots', 'Identifying changed variables...');
+    spinner.start();
+    const changedVariables = findChangedVariables(
+      variableGraph,
+      changedLinesByFile
+    );
+    const changedVarCount = Array.from(changedVariables.values()).reduce(
+      (total, varSet) => total + varSet.size,
+      0
+    );
+    spinner.succeed(
+      `Variable analysis complete - ${changedVarCount} changed variable${
+        changedVarCount !== 1 ? 's' : ''
+      } identified`
+    );
+
+    result.variableGraph = variableGraph;
+    result.changedVariables = changedVariables;
+  }
+
+  return result;
 }
 
 /**
@@ -80,7 +117,8 @@ function analyzeProject(
   format: string = 'tree',
   compact: boolean = false,
   maxNodes: number | null = null,
-  groupByFile: boolean = true
+  groupByFile: boolean = true,
+  includeVariables: boolean = true
 ): void {
   let spinner: Spinner | undefined;
 
@@ -103,7 +141,7 @@ function analyzeProject(
     console.log(); // Add spacing before analysis
 
     // Perform analysis with progress indicators
-    const result = performAnalysis(diffOutput, tsConfigPath);
+    const result = performAnalysis(diffOutput, tsConfigPath, includeVariables);
 
     // Add spacing before results
     console.log();
@@ -173,6 +211,10 @@ cli
     '--no-file-grouping',
     'Disable grouping multiple functions from same file (shows each function separately)'
   )
+  .option(
+    '--no-variables',
+    'Disable variable change tracking and impact analysis'
+  )
   .action((options) => {
     analyzeProject(
       options.depth || null,
@@ -180,7 +222,8 @@ cli
       options.format,
       options.compact || false,
       options.maxNodes || null,
-      options.fileGrouping !== false // Default to true unless --no-file-grouping is used
+      options.fileGrouping !== false, // Default to true unless --no-file-grouping is used
+      !options.noVariables // Default to true unless --no-variables is used
     );
   });
 

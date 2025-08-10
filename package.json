@@ -1,7 +1,7 @@
 {
   "name": "depwalker",
   "version": "0.1.0",
-  "description": "",
+  "description": "A comprehensive TypeScript dependency analysis tool that tracks the impact of code changes, including function calls and variable usage across your codebase",
   "main": "dist/index.js",
   "bin": {
     "depwalker": "dist/index.js"
@@ -12,7 +12,20 @@
     "depwalker": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": [],
+  "keywords": [
+    "typescript",
+    "dependency-analysis",
+    "impact-analysis",
+    "code-analysis",
+    "ast",
+    "git",
+    "refactoring",
+    "cli",
+    "developer-tools",
+    "function-tracking",
+    "variable-tracking",
+    "static-analysis"
+  ],
   "author": "Ray Azrin Karim",
   "license": "ISC",
   "packageManager": "pnpm@10.11.0",

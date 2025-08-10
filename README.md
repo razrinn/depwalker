@@ -1,9 +1,10 @@
 # 🚶‍♂️ DepWalker
 
-A TypeScript-based dependency analysis tool that tracks the impact of code changes across your codebase. DepWalker analyzes your Git changes and shows you which functions are affected and their dependency chains.
+A comprehensive TypeScript-based dependency analysis tool that tracks the impact of code changes across your codebase. DepWalker analyzes your Git changes and shows you which functions and variables are affected, along with their dependency chains and usage patterns.
 
 ## 🎯 Use Cases
 
+### Function & Component Analysis
 - **Pre-commit Code Review**: See which parts of your codebase are affected by your changes before committing
 - **Impact Analysis**: Understand the ripple effects of modifying a function or component
 - **Test Planning**: Identify which components need testing after making changes
@@ -11,8 +12,17 @@ A TypeScript-based dependency analysis tool that tracks the impact of code chang
 - **Code Review Assistance**: Help reviewers understand the full context of your changes
 - **Breaking Change Detection**: Discover unexpected dependencies on functions you're modifying
 - **React Component Changes**: Track which components are affected when updating shared hooks or context
+
+### Variable & Configuration Analysis
+- **Configuration Changes**: Track which functions are affected when modifying configuration variables, constants, or imports
+- **Variable Usage Tracking**: See all read/write/reference patterns for changed variables across your codebase
+- **Constant Impact Analysis**: Understand how changing constants or configuration objects affects dependent code
+- **Import/Export Analysis**: Track the impact of changes to imported/exported variables and modules
+
+### Advanced Analysis Features
 - **Large Codebase Navigation**: Use depth limits to focus on immediate dependencies in complex projects
 - **Circular Dependency Discovery**: Identify problematic circular references while analyzing impact
+- **Multi-format Output**: Generate reports in tree, list, or JSON format for different use cases
 - **Documentation**: Generate dependency information for architecture documentation
 
 ## 📦 Installation
@@ -208,6 +218,15 @@ Detected changes in these functions:
 
   🔸 validateInput (line ~15)
     • No dependencies found
+
+📦 Changed Variables and Their Usage:
+
+📁 src/config/constants.ts:
+
+  📦 API_BASE_URL (const) (line ~5)
+    1. fetchData in src/utils/api.ts (line ~15) (2 reads)
+    2. configureClient in src/services/http.ts (line ~8) (1 read)
+    3. setupEnvironment in src/config/env.ts (line ~12) (1 read, 1 ref)
 ```
 
 #### JSON Format
@@ -268,8 +287,9 @@ depwalker/
 
 2. **Parse Changed Lines**: It parses the diff output to identify which TypeScript files have changes and exactly which lines were modified.
 
-3. **Build Dependency Graph**: Using the TypeScript Compiler API, it:
+3. **Build Dependency Graphs**: Using the TypeScript Compiler API, it builds two main graphs:
 
+   **Function Call Graph:**
    - Parses all TypeScript files in your project
    - Identifies all function declarations and variable declarations that contain functions
    - Tracks all function calls and JSX component usage
@@ -277,13 +297,24 @@ depwalker/
    - Handles React patterns like `React.memo()` and dynamic imports
    - Tracks JSX component usage and dependencies
 
-4. **Impact Analysis**: For each changed function, it traverses the dependency graph to find all functions that directly or indirectly depend on it.
+   **Variable Usage Graph:**
+   - Identifies all variable declarations (const, let, var, imports, parameters)
+   - Tracks variable usage patterns (read, write, reference)
+   - Maps variable usage to specific functions and line numbers
+   - Handles different variable scopes (global, module, function, block)
+   - Tracks import/export relationships and their usage
+
+4. **Impact Analysis**: For each changed item, it performs dual analysis:
+   - **Function Impact**: Traverses the call graph to find all functions that depend on changed functions
+   - **Variable Impact**: Identifies all functions that use changed variables and analyzes their dependencies
 
 5. **Smart Output**: Presents results with intelligent formatting:
+   - **Dual Analysis Display**: Shows both function and variable changes with their respective impacts
    - **File Grouping**: Groups multiple functions from the same file
+   - **Usage Type Classification**: Distinguishes between read, write, and reference operations for variables
    - **Circular Reference Detection**: Identifies and handles circular dependencies
    - **Progress Indicators**: Shows real-time progress with spinners
-   - **Impact Statistics**: Provides summary metrics and top impacted functions
+   - **Impact Statistics**: Provides summary metrics for both functions and variables
 
 ## 🔧 Configuration
 
@@ -298,9 +329,9 @@ DepWalker uses your project's `tsconfig.json` file for TypeScript compilation se
 
 #### Output Format Options
 
-- **`-f, --format <type>`**: Output format - `tree` (default), `list`, or `json`
-  - `tree`: Hierarchical tree view (default)
-  - `list`: Flat list of dependencies
+- **`-f, --format <type>`**: Output format - `list` (default), `tree`, or `json`
+  - `list`: Flat list of dependencies (default)
+  - `tree`: Hierarchical tree view
   - `json`: JSON output for programmatic use
 
 #### Display Control Options
@@ -308,6 +339,7 @@ DepWalker uses your project's `tsconfig.json` file for TypeScript compilation se
 - **`-c, --compact`**: Enable compact mode - reduces duplicate references and limits callers per function. Useful for large codebases.
 - **`--max-nodes <number>`**: Maximum total nodes to display in the entire tree. Prevents overwhelming output on very large dependency chains.
 - **`--no-file-grouping`**: Disable grouping of multiple functions from the same file. Shows each function separately instead of grouping them.
+- **`--no-variables`**: Disable variable change tracking and impact analysis. Focus only on function dependencies.
 
 #### Examples
 
