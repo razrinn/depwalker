@@ -18,11 +18,11 @@ jobs:
   test-and-build:
     name: Test & Build
     runs-on: ubuntu-latest
-    
+
     strategy:
       matrix:
         node-version: [20, 22]
-    
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -69,14 +69,13 @@ jobs:
     needs: test-and-build
     # Only run release on main branch pushes (not PRs)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    
+
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
           # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -97,35 +96,16 @@ jobs:
         uses: changesets/action@v1
         with:
           publish: pnpm release
-          title: "Release: Version Packages"
-          commit: "chore: version packages"
+          title: 'Release: Version Packages'
+          commit: 'chore: version packages'
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
 
-      - name: Create Git Tag and GitHub Release
+      - name: Send notification if published
         if: steps.changesets.outputs.published == 'true'
         run: |
-          # Fetch latest changes (changesets action may have pushed commits)
-          git fetch origin main
-          git reset --hard origin/main
-
-          # Get the current version from package.json
           VERSION=$(node -p "require('./package.json').version")
-          TAG="v$VERSION"
-
-          # Configure git
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-
-          # Create and push tag
-          git tag "$TAG"
-          git push origin "$TAG"
-
-          # Create GitHub release
-          gh release create "$TAG" \
-            --title "Release $VERSION" \
-            --notes "See [CHANGELOG.md](./CHANGELOG.md) for details." \
-            --latest
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          echo "🎉 Successfully published v$VERSION to npm!"
+          echo "📦 Package: https://www.npmjs.com/package/depwalker"
+          echo "🏷️ Git tag v$VERSION was automatically created by changesets"
