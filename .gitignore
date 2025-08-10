@@ -1,6 +1,13 @@
 # Node dependencies
 node_modules/
+dist/
 
+# Test coverage
+coverage/
+.nyc_output/
+
+# Vitest
+.vitest/
 # Output directories
 dist/
 build/
