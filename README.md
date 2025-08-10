@@ -80,6 +80,12 @@ depwalker --depth 2 --tsconfig ./build/tsconfig.prod.json
 # Output formats
 depwalker --format tree    # Tree view
 depwalker --format json    # JSON for CI/CD
+depwalker --format html    # Interactive HTML graph
+
+# Save output to file
+depwalker --format html --output dependency-graph.html
+depwalker --format json --output analysis.json
+depwalker --format tree --output report.txt
 
 # Large codebase options
 depwalker --compact --max-nodes 50
@@ -176,6 +182,20 @@ jobs:
 depwalker --format json > analysis-report.json
 ```
 
+**HTML Format** (Interactive Graph):
+
+```bash
+depwalker --format html --output dependency-graph.html
+# Open dependency-graph.html in your browser
+```
+
+The HTML format generates an interactive dependency graph with:
+- Visual node-link graph using vis.js
+- Color-coded nodes for changed functions/variables and their impact levels
+- Interactive controls (zoom, pan, physics simulation)
+- Click on nodes to see detailed information
+- Responsive design with shadcn/ui color theme
+
 ## 🏗️ How It Works
 
 1. **Git Analysis**: Fetches uncommitted changes via `git diff`
@@ -191,7 +211,8 @@ depwalker --format json > analysis-report.json
 
 - `-d, --depth <number>` - Maximum analysis depth. Default: no limit
 - `-t, --tsconfig <path>` - TypeScript config file path. Default: ./tsconfig.json
-- `-f, --format <type>` - Output format: `list`, `tree`, `json`. Default: `list`
+- `-f, --format <type>` - Output format: `list`, `tree`, `json`, `html`. Default: `list`
+- `-o, --output <file>` - Save output to a file instead of printing to console
 
 **Display Options:**
 

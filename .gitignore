@@ -50,3 +50,11 @@ coverage/
 # pnpm-lock.yaml
 
 test-report-report.junit.xml
+
+# DepWalker output files
+*.depwalker.html
+dependency-graph.html
+analysis.json
+analysis-*.json
+analysis-*.txt
+analysis-*.html

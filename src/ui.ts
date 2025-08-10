@@ -118,10 +118,17 @@ export function printAnalysisResults(
   } = result;
 
   const isJsonFormat = format.toLowerCase() === 'json';
+  const isHtmlFormat = format.toLowerCase() === 'html';
 
   // For JSON format, directly output JSON without any console messages
   if (isJsonFormat) {
     printJsonFormat(result, maxDepth);
+    return;
+  }
+
+  // For HTML format, output interactive HTML
+  if (isHtmlFormat) {
+    printHtmlFormat(result, maxDepth);
     return;
   }
 
@@ -1056,4 +1063,664 @@ function collectAllDependents(
   }
 
   return [...new Set(dependents)]; // Remove duplicates
+}
+
+/**
+ * HTML format with interactive dependency graph
+ */
+function printHtmlFormat(
+  result: AnalysisResult,
+  maxDepth: number | null
+): void {
+  const { changedFiles, changedFunctions, callGraph, changedVariables, variableGraph } = result;
+
+  // Build graph data for visualization
+  const nodes: any[] = [];
+  const edges: any[] = [];
+  const nodeMap = new Map<string, number>();
+  let nodeId = 0;
+
+  // Helper to get or create node ID
+  const getNodeId = (id: string): number => {
+    if (!nodeMap.has(id)) {
+      nodeMap.set(id, nodeId++);
+    }
+    return nodeMap.get(id)!;
+  };
+
+  // Add changed functions as nodes
+  for (const [filePath, functionIds] of changedFunctions.entries()) {
+    for (const functionId of functionIds) {
+      // Skip if it's actually a variable
+      if (variableGraph && variableGraph.has(functionId)) continue;
+      if (changedVariables) {
+        const fileVariables = changedVariables.get(filePath);
+        if (fileVariables && fileVariables.has(functionId)) continue;
+      }
+
+      const parts = functionId.split(':');
+      const functionName = parts[1] || 'unknown';
+      const functionNode = callGraph.get(functionId);
+      const nodeIndex = getNodeId(functionId);
+
+      nodes.push({
+        id: nodeIndex,
+        label: functionName,
+        file: truncatePath(filePath),
+        fullPath: filePath,
+        line: functionNode?.definition?.startLine || null,
+        type: 'function',
+        changed: true,
+        level: 0,
+        dependentCount: 0
+      });
+    }
+  }
+
+  // Add changed variables as nodes
+  if (changedVariables && variableGraph) {
+    for (const [filePath, variableIds] of changedVariables.entries()) {
+      for (const variableId of variableIds) {
+        const parts = variableId.split(':');
+        const variableName = parts[1] || 'unknown';
+        const variableNode = variableGraph.get(variableId);
+        const nodeIndex = getNodeId(variableId);
+
+        nodes.push({
+          id: nodeIndex,
+          label: variableName,
+          file: truncatePath(filePath),
+          fullPath: filePath,
+          line: variableNode?.definition?.startLine || null,
+          type: 'variable',
+          varType: variableNode?.type || 'unknown',
+          changed: true,
+          level: 0,
+          usageCount: variableNode?.usages?.length || 0
+        });
+      }
+    }
+  }
+
+  // Build dependency tree and add edges
+  const visited = new Set<string>();
+  const processedEdges = new Set<string>();
+
+  // Process function dependencies
+  for (const [filePath, functionIds] of changedFunctions.entries()) {
+    for (const functionId of functionIds) {
+      // Skip if it's actually a variable
+      if (variableGraph && variableGraph.has(functionId)) continue;
+      if (changedVariables) {
+        const fileVariables = changedVariables.get(filePath);
+        if (fileVariables && fileVariables.has(functionId)) continue;
+      }
+
+      const stack: { id: string; depth: number }[] = [{ id: functionId, depth: 0 }];
+      const localVisited = new Set<string>();
+
+      while (stack.length > 0) {
+        const { id: currentId, depth } = stack.pop()!;
+        if (localVisited.has(currentId) || (maxDepth !== null && depth > maxDepth)) {
+          continue;
+        }
+        localVisited.add(currentId);
+
+        const currentNode = callGraph.get(currentId);
+        if (currentNode && currentNode.callers) {
+          for (const caller of currentNode.callers) {
+            const callerId = caller.callerId;
+            const callerNodeId = getNodeId(callerId);
+            const currentNodeId = getNodeId(currentId);
+
+            // Add caller node if not exists
+            if (!nodeMap.has(callerId) || nodes.findIndex(n => n.id === callerNodeId) === -1) {
+              const [callerFile, callerFunc] = callerId.split(':');
+              const callerNode = callGraph.get(callerId);
+              nodes.push({
+                id: callerNodeId,
+                label: callerFunc || 'unknown',
+                file: truncatePath(callerFile || ''),
+                fullPath: callerFile || '',
+                line: callerNode?.definition?.startLine || null,
+                type: 'function',
+                changed: false,
+                level: depth + 1,
+                dependentCount: 0
+              });
+            }
+
+            // Add edge
+            const edgeKey = `${callerNodeId}-${currentNodeId}`;
+            if (!processedEdges.has(edgeKey)) {
+              edges.push({
+                from: callerNodeId,
+                to: currentNodeId,
+                type: 'calls',
+                line: caller.line
+              });
+              processedEdges.add(edgeKey);
+
+              // Update dependent count for changed node
+              const changedNodeIndex = nodes.findIndex(n => n.id === currentNodeId);
+              if (changedNodeIndex !== -1 && nodes[changedNodeIndex].changed) {
+                nodes[changedNodeIndex].dependentCount++;
+              }
+            }
+
+            // Continue traversing
+            stack.push({ id: callerId, depth: depth + 1 });
+          }
+        }
+      }
+    }
+  }
+
+  // Process variable usages
+  if (changedVariables && variableGraph) {
+    for (const [filePath, variableIds] of changedVariables.entries()) {
+      for (const variableId of variableIds) {
+        const variableNode = variableGraph.get(variableId);
+        if (variableNode && variableNode.usages) {
+          const varNodeId = getNodeId(variableId);
+
+          for (const usage of variableNode.usages) {
+            const userNodeId = getNodeId(usage.userId);
+
+            // Add user node if not exists
+            if (!nodeMap.has(usage.userId) || nodes.findIndex(n => n.id === userNodeId) === -1) {
+              const [userFile, userFunc] = usage.userId.split(':');
+              nodes.push({
+                id: userNodeId,
+                label: userFunc || 'unknown',
+                file: truncatePath(userFile || ''),
+                fullPath: userFile || '',
+                line: usage.line,
+                type: 'function',
+                changed: false,
+                level: 1,
+                dependentCount: 0
+              });
+            }
+
+            // Add edge for variable usage
+            const edgeKey = `${userNodeId}-${varNodeId}`;
+            if (!processedEdges.has(edgeKey)) {
+              edges.push({
+                from: userNodeId,
+                to: varNodeId,
+                type: 'uses',
+                usageType: usage.usageType,
+                line: usage.line
+              });
+              processedEdges.add(edgeKey);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Calculate statistics
+  const totalChangedFunctions = Array.from(changedFunctions.values())
+    .reduce((total, funcSet) => {
+      // Filter out variables
+      const actualFunctions = Array.from(funcSet).filter(id => {
+        if (variableGraph && variableGraph.has(id)) return false;
+        if (changedVariables) {
+          for (const [fp, vars] of changedVariables.entries()) {
+            if (vars.has(id)) return false;
+          }
+        }
+        return true;
+      });
+      return total + actualFunctions.length;
+    }, 0);
+
+  const totalChangedVariables = changedVariables
+    ? Array.from(changedVariables.values()).reduce((total, varSet) => total + varSet.size, 0)
+    : 0;
+
+  // Generate HTML with embedded graph data
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DepWalker - Dependency Analysis</title>
+    <script src="https://unpkg.com/vis-network@9.1.9/dist/vis-network.min.js"></script>
+    <link href="https://unpkg.com/vis-network@9.1.9/dist/dist/vis-network.min.css" rel="stylesheet" type="text/css" />
+    <style>
+        :root {
+            --color-primary: hsl(222.2, 47.4%, 11.2%);
+            --color-primary-foreground: hsl(210, 40%, 98%);
+            --color-secondary: hsl(210, 40%, 96.1%);
+            --color-accent: hsl(210, 40%, 96.1%);
+            --color-muted: hsl(210, 40%, 96.1%);
+            --color-border: hsl(214.3, 31.8%, 91.4%);
+            --color-success: hsl(142, 76%, 36%);
+            --color-warning: hsl(38, 92%, 50%);
+            --color-error: hsl(0, 84%, 60%);
+            --color-info: hsl(199, 89%, 48%);
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .header {
+            background: rgba(255, 255, 255, 0.98);
+            padding: 1.5rem 2rem;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        .header h1 {
+            color: var(--color-primary);
+            font-size: 1.8rem;
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .stats {
+            display: flex;
+            gap: 2rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        .stat {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        .stat-label {
+            font-size: 0.875rem;
+            color: #666;
+            font-weight: 500;
+        }
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--color-primary);
+        }
+        .main-container {
+            flex: 1;
+            display: flex;
+            gap: 1.5rem;
+            padding: 1.5rem;
+            max-width: 100%;
+            overflow: hidden;
+        }
+        .graph-container {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            position: relative;
+            overflow: hidden;
+            min-height: 500px;
+        }
+        #mynetwork {
+            width: 100%;
+            height: 100%;
+            min-height: 500px;
+        }
+        .sidebar {
+            width: 320px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+            padding: 1.5rem;
+            overflow-y: auto;
+            max-height: calc(100vh - 180px);
+        }
+        .legend {
+            margin-bottom: 1.5rem;
+        }
+        .legend h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--color-primary);
+            font-weight: 600;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+        .legend-color {
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            border: 2px solid white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .node-details {
+            margin-top: 1.5rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid var(--color-border);
+        }
+        .node-details h3 {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+            color: var(--color-primary);
+            font-weight: 600;
+        }
+        .node-info {
+            background: var(--color-secondary);
+            padding: 1rem;
+            border-radius: 8px;
+            font-size: 0.875rem;
+        }
+        .node-info div {
+            margin-bottom: 0.5rem;
+        }
+        .node-info div:last-child {
+            margin-bottom: 0;
+        }
+        .node-info strong {
+            color: var(--color-primary);
+            font-weight: 600;
+        }
+        .controls {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            z-index: 10;
+        }
+        .controls button {
+            padding: 0.5rem 1rem;
+            background: var(--color-primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.875rem;
+            font-weight: 500;
+            transition: all 0.2s;
+        }
+        .controls button:hover {
+            background: var(--color-primary);
+            opacity: 0.9;
+            transform: translateY(-1px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #666;
+        }
+        @media (max-width: 768px) {
+            .main-container {
+                flex-direction: column;
+            }
+            .sidebar {
+                width: 100%;
+                max-height: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🚀 DepWalker Dependency Analysis</h1>
+        <div class="stats">
+            <div class="stat">
+                <span class="stat-label">Changed Files</span>
+                <span class="stat-value">${changedFiles.length}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Changed Functions</span>
+                <span class="stat-value">${totalChangedFunctions}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Changed Variables</span>
+                <span class="stat-value">${totalChangedVariables}</span>
+            </div>
+            <div class="stat">
+                <span class="stat-label">Total Dependencies</span>
+                <span class="stat-value">${edges.length}</span>
+            </div>
+        </div>
+    </div>
+    
+    <div class="main-container">
+        <div class="graph-container">
+            <div class="controls">
+                <button onclick="fitNetwork()">Fit View</button>
+                <button onclick="togglePhysics()">Toggle Physics</button>
+                <button onclick="resetSelection()">Clear Selection</button>
+            </div>
+            <div id="mynetwork"></div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="legend">
+                <h3>Legend</h3>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #ff6b6b;"></div>
+                    <span>Changed Function</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #4ecdc4;"></div>
+                    <span>Changed Variable</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #95a5a6;"></div>
+                    <span>Dependent Function</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #f39c12;"></div>
+                    <span>High Impact (6+ deps)</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background: #3498db;"></div>
+                    <span>Medium Impact (3-5 deps)</span>
+                </div>
+            </div>
+            
+            <div class="node-details">
+                <h3>Node Details</h3>
+                <div id="nodeInfo" class="node-info">
+                    <div class="empty-state">Click on a node to see details</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Graph data
+        const graphData = {
+            nodes: ${JSON.stringify(nodes)},
+            edges: ${JSON.stringify(edges)}
+        };
+
+        // Create vis.js nodes and edges
+        const visNodes = new vis.DataSet(graphData.nodes.map(node => {
+            let color = '#95a5a6'; // Default: dependent function
+            let size = 25;
+            let shape = 'dot';
+            
+            if (node.changed) {
+                if (node.type === 'variable') {
+                    color = '#4ecdc4';
+                    shape = 'square';
+                } else {
+                    color = '#ff6b6b';
+                }
+                size = 35;
+            }
+            
+            // Color by impact level
+            if (node.type === 'function' && node.changed) {
+                if (node.dependentCount >= 6) {
+                    color = '#f39c12'; // High impact
+                    size = 40;
+                } else if (node.dependentCount >= 3) {
+                    color = '#3498db'; // Medium impact
+                    size = 35;
+                }
+            } else if (node.type === 'variable' && node.changed) {
+                if (node.usageCount >= 6) {
+                    color = '#f39c12';
+                    size = 40;
+                } else if (node.usageCount >= 3) {
+                    color = '#3498db';
+                    size = 35;
+                }
+            }
+            
+            return {
+                id: node.id,
+                label: node.label,
+                color: color,
+                size: size,
+                shape: shape,
+                font: {
+                    size: 12,
+                    color: '#333',
+                    face: 'system-ui'
+                },
+                borderWidth: node.changed ? 3 : 1,
+                borderWidthSelected: 4,
+                data: node
+            };
+        }));
+
+        const visEdges = new vis.DataSet(graphData.edges.map(edge => ({
+            from: edge.from,
+            to: edge.to,
+            arrows: 'to',
+            color: {
+                color: edge.type === 'uses' ? '#9b59b6' : '#7f8c8d',
+                opacity: 0.6
+            },
+            width: edge.type === 'uses' ? 2 : 1,
+            smooth: {
+                type: 'cubicBezier',
+                roundness: 0.4
+            },
+            data: edge
+        })));
+
+        // Create network
+        const container = document.getElementById('mynetwork');
+        const data = {
+            nodes: visNodes,
+            edges: visEdges
+        };
+        
+        const options = {
+            layout: {
+                improvedLayout: true,
+                hierarchical: {
+                    enabled: true,
+                    direction: 'UD',
+                    sortMethod: 'directed',
+                    nodeSpacing: 150,
+                    levelSeparation: 100,
+                    shakeTowards: 'roots'
+                }
+            },
+            physics: {
+                enabled: true,
+                hierarchicalRepulsion: {
+                    nodeDistance: 200,
+                    centralGravity: 0.1,
+                    springLength: 100,
+                    springConstant: 0.01
+                },
+                stabilization: {
+                    iterations: 150
+                }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 200,
+                hideEdgesOnDrag: true
+            },
+            edges: {
+                smooth: {
+                    type: 'cubicBezier',
+                    forceDirection: 'vertical',
+                    roundness: 0.4
+                }
+            }
+        };
+        
+        const network = new vis.Network(container, data, options);
+        
+        // Event handlers
+        network.on('click', function(params) {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const node = visNodes.get(nodeId);
+                showNodeDetails(node.data);
+            }
+        });
+        
+        network.on('stabilizationIterationsDone', function() {
+            network.setOptions({ physics: false });
+        });
+        
+        // Helper functions
+        function showNodeDetails(node) {
+            let html = '<div>';
+            html += '<div><strong>Name:</strong> ' + node.label + '</div>';
+            html += '<div><strong>Type:</strong> ' + node.type + '</div>';
+            html += '<div><strong>File:</strong> ' + node.file + '</div>';
+            if (node.line) {
+                html += '<div><strong>Line:</strong> ~' + node.line + '</div>';
+            }
+            if (node.type === 'variable' && node.varType) {
+                html += '<div><strong>Variable Type:</strong> ' + node.varType + '</div>';
+            }
+            if (node.changed) {
+                html += '<div><strong>Status:</strong> <span style="color: #ff6b6b;">Changed</span></div>';
+                if (node.type === 'function' && node.dependentCount !== undefined) {
+                    html += '<div><strong>Dependents:</strong> ' + node.dependentCount + '</div>';
+                } else if (node.type === 'variable' && node.usageCount !== undefined) {
+                    html += '<div><strong>Usages:</strong> ' + node.usageCount + '</div>';
+                }
+            }
+            html += '</div>';
+            document.getElementById('nodeInfo').innerHTML = html;
+        }
+        
+        function fitNetwork() {
+            network.fit({
+                animation: {
+                    duration: 1000,
+                    easingFunction: 'easeInOutQuad'
+                }
+            });
+        }
+        
+        let physicsEnabled = false;
+        function togglePhysics() {
+            physicsEnabled = !physicsEnabled;
+            network.setOptions({ physics: physicsEnabled });
+        }
+        
+        function resetSelection() {
+            network.unselectAll();
+            document.getElementById('nodeInfo').innerHTML = '<div class="empty-state">Click on a node to see details</div>';
+        }
+        
+        // Initial fit after stabilization
+        network.once('stabilizationIterationsDone', function() {
+            setTimeout(fitNetwork, 100);
+        });
+    </script>
+</body>
+</html>`;
+
+  console.log(html);
 }
