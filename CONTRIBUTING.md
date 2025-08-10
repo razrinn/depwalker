@@ -3,6 +3,7 @@
 ## Development Workflow
 
 1. **Clone and setup**:
+
    ```bash
    git clone https://github.com/your-username/depwalker.git
    cd depwalker
@@ -10,12 +11,14 @@
    ```
 
 2. **Development**:
+
    ```bash
    pnpm dev          # Watch mode for TypeScript compilation
    pnpm test:watch   # Watch mode for tests
    ```
 
 3. **Testing**:
+
    ```bash
    pnpm test         # Run all tests
    pnpm test:coverage # Run tests with coverage
@@ -35,12 +38,14 @@ This project uses [Changesets](https://github.com/changesets/changesets) for aut
 We use a single comprehensive workflow that handles both testing and releasing:
 
 #### **For Pull Requests:**
+
 - ✅ Tests run on Node 20 & 22
 - ✅ Coverage reporting
 - ✅ Build verification
 - ❌ **No release** (PRs only test)
 
 #### **For Main Branch:**
+
 - ✅ Tests & build (must pass first)
 - ✅ Release process (only if tests pass)
 
@@ -49,23 +54,27 @@ We use a single comprehensive workflow that handles both testing and releasing:
 1. **Make your changes** and commit them to a feature branch
 
 2. **Add a changeset** describing your changes:
+
    ```bash
    pnpm changeset
    ```
-   
+
    This will prompt you to:
+
    - Select the type of change (patch/minor/major)
    - Write a summary of the changes
-   
+
    A changeset file will be created in `.changeset/` directory.
 
 3. **Commit the changeset** along with your changes:
+
    ```bash
    git add .
    git commit -m "feat: your feature description"
    ```
 
 4. **Create a PR** to main branch
+
    - PR will run tests automatically
    - **Require tests to pass** before merging
 
@@ -80,7 +89,7 @@ We use a single comprehensive workflow that handles both testing and releasing:
 ### Types of Changes
 
 - **patch**: Bug fixes, small improvements (0.1.0 → 0.1.1)
-- **minor**: New features, backwards compatible (0.1.0 → 0.2.0)  
+- **minor**: New features, backwards compatible (0.1.0 → 0.2.0)
 - **major**: Breaking changes (0.1.0 → 1.0.0)
 
 ### Manual Release (if needed)
@@ -99,7 +108,7 @@ pnpm release
 
 ```
 depwalker/
-├── src/                 # Source code
+├── src/                # Source code
 ├── dist/               # Built output (generated)
 ├── tests/              # Test files
 ├── .changeset/         # Changeset files

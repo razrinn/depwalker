@@ -35,8 +35,19 @@
     "variable-tracking",
     "static-analysis"
   ],
-  "author": "Ray Azrin Karim",
+  "author": {
+    "name": "Ray Azrin Karim",
+    "url": "https://github.com/razrinn"
+  },
   "license": "ISC",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/razrinn/depwalker.git"
+  },
+  "bugs": {
+    "url": "https://github.com/razrinn/depwalker/issues"
+  },
+  "homepage": "https://github.com/razrinn/depwalker#readme",
   "engines": {
     "node": ">=20.0.0"
   },
