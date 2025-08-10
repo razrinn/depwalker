@@ -45,22 +45,17 @@ jobs:
         run: pnpm test
 
       - name: Run tests with coverage
-        if: matrix.node-version == 20
+        if: matrix.node-version == 22
         run: pnpm test:coverage
 
       - name: Upload coverage to Codecov
-        if: matrix.node-version == 20
-        uses: codecov/codecov-action@v4
+        if: matrix.node-version == 22
+        uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          file: ./coverage/lcov.info
-          fail_ci_if_error: true
-          verbose: true
-          name: depwalker-coverage
-          flags: unittests
 
       - name: Upload test results to Codecov
-        if: matrix.node-version == 20 && ${{ !cancelled() }}
+        if: matrix.node-version == 22 && ${{ !cancelled() }}
         uses: codecov/test-results-action@v1
         with:
           token: ${{ secrets.CODECOV_TOKEN }}

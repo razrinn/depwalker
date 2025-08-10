@@ -14,10 +14,10 @@
     "dev": "tsc -w",
     "build": "rm -rf dist && tsc",
     "depwalker": "node dist/index.js",
-    "test": "vitest --run",
+    "test": "vitest run",
     "test:watch": "vitest --watch",
     "test:ui": "vitest --ui",
-    "test:coverage": "vitest --coverage --run",
+    "test:coverage": "vitest run --coverage",
     "changeset": "changeset",
     "version-packages": "changeset version",
     "release": "pnpm build && changeset publish"
