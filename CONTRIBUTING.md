@@ -30,6 +30,20 @@
 
 This project uses [Changesets](https://github.com/changesets/changesets) for automated version management and changelog generation.
 
+### CI/CD Pipeline
+
+We use a single comprehensive workflow that handles both testing and releasing:
+
+#### **For Pull Requests:**
+- ✅ Tests run on Node 20 & 22
+- ✅ Coverage reporting
+- ✅ Build verification
+- ❌ **No release** (PRs only test)
+
+#### **For Main Branch:**
+- ✅ Tests & build (must pass first)
+- ✅ Release process (only if tests pass)
+
 ### Creating a Release
 
 1. **Make your changes** and commit them to a feature branch
@@ -52,11 +66,14 @@ This project uses [Changesets](https://github.com/changesets/changesets) for aut
    ```
 
 4. **Create a PR** to main branch
+   - PR will run tests automatically
+   - **Require tests to pass** before merging
 
-5. **After your PR is merged**, the GitHub Action will automatically:
+5. **After your PR is merged**, the CI/CD will automatically:
+   - Run tests & build again
    - Create a "Version Packages" PR with version bumps and changelog updates
    - When you merge that PR, it will automatically:
-     - Publish to npm 📦
+     - Publish to npm 📦 (only if changesets exist)
      - Create a git tag (e.g., `v1.2.3`) 🏷️
      - Create a GitHub release 🚀
 

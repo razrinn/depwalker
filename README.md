@@ -1,7 +1,7 @@
 # 🚶‍♂️ DepWalker
 
 [![Coverage](https://codecov.io/gh/razrinn/depwalker/branch/main/graph/badge.svg)](https://codecov.io/gh/razrinn/depwalker)
-[![Tests](https://github.com/razrinn/depwalker/actions/workflows/test.yml/badge.svg)](https://github.com/razrinn/depwalker/actions/workflows/test.yml)
+[![Tests](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml)
 
 A comprehensive TypeScript-based dependency analysis tool that tracks the impact of code changes across your codebase. DepWalker analyzes your Git changes and shows you which functions and variables are affected, along with their dependency chains and usage patterns.
 
