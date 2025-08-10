@@ -3,12 +3,15 @@
   "version": "0.1.0",
   "description": "A comprehensive TypeScript dependency analysis tool that tracks the impact of code changes, including function calls and variable usage across your codebase",
   "main": "dist/index.js",
+  "files": [
+    "dist/**/*"
+  ],
   "bin": {
     "depwalker": "dist/index.js"
   },
   "scripts": {
     "dev": "tsc -w",
-    "build": "tsc",
+    "build": "rm -rf dist && tsc",
     "depwalker": "node dist/index.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
