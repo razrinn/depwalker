@@ -176,44 +176,6 @@ jobs:
 depwalker --format json > analysis-report.json
 ```
 
-## 🧪 Testing
-
-Comprehensive test suite with **Vitest** and 70% minimum coverage thresholds.
-
-```bash
-# Run tests
-pnpm test
-pnpm test:watch
-pnpm test:coverage
-pnpm test:ui
-```
-
-**Test Coverage:** 44 tests (37 unit + 7 integration) covering git parsing, UI components, and analysis pipeline.
-
-## 🛠️ Development
-
-### Available Scripts
-
-- `pnpm dev` - Watch mode for development (recompiles on changes)
-- `pnpm build` - Build the project for production
-- `pnpm test` - Run tests with Vitest
-- `pnpm test:coverage` - Run tests with coverage report
-- `pnpm test:watch` - Run tests in watch mode
-
-### Project Structure
-
-```
-depwalker/
-├── src/
-│   ├── index.ts        # Main CLI application
-│   ├── analyzer.ts     # TypeScript analysis and dependency graph logic
-│   └── ui.ts          # Output formatting and progress indicators
-├── dist/               # Compiled JavaScript output (generated)
-├── package.json        # Project metadata and dependencies
-├── tsconfig.json       # TypeScript configuration
-├── pnpm-lock.yaml      # Lock file for dependencies
-└── README.md          # This file
-```
 
 ## 🏗️ How It Works
 

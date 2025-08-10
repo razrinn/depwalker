@@ -108,20 +108,48 @@ pnpm release
 
 ```
 depwalker/
-├── src/                # Source code
-├── dist/               # Built output (generated)
+├── src/
+│   ├── index.ts        # Main CLI application
+│   ├── analyzer.ts     # TypeScript analysis and dependency graph logic
+│   └── ui.ts          # Output formatting and progress indicators
+├── dist/               # Compiled JavaScript output (generated)
 ├── tests/              # Test files
 ├── .changeset/         # Changeset files
-└── .github/workflows/  # CI/CD workflows
+├── .github/workflows/  # CI/CD workflows
+├── package.json        # Project metadata and dependencies
+├── tsconfig.json       # TypeScript configuration
+├── pnpm-lock.yaml      # Lock file for dependencies
+├── LICENSE             # License file
+├── CONTRIBUTING.md     # This file
+└── README.md          # Main documentation
 ```
 
-## Scripts Reference
+## 🧪 Testing
 
-- `pnpm dev` - Development with watch mode
-- `pnpm build` - Build for production
-- `pnpm test` - Run tests
+Comprehensive test suite with **Vitest** and 70% minimum coverage thresholds.
+
+### Available Test Scripts
+
+```bash
+# Run tests
+pnpm test
+pnpm test:watch
+pnpm test:coverage
+pnpm test:ui
+```
+
+**Test Coverage:** 44 tests (37 unit + 7 integration) covering git parsing, UI components, and analysis pipeline.
+
+## 🛠️ Development Scripts
+
+### Available Scripts
+
+- `pnpm dev` - Watch mode for development (recompiles on changes)
+- `pnpm build` - Build the project for production
+- `pnpm test` - Run tests with Vitest
+- `pnpm test:coverage` - Run tests with coverage report
 - `pnpm test:watch` - Run tests in watch mode
-- `pnpm test:coverage` - Run tests with coverage
+- `pnpm test:ui` - Run tests with UI interface
 - `pnpm changeset` - Create a new changeset
 - `pnpm version-packages` - Version packages (done automatically)
 - `pnpm release` - Publish to npm (done automatically)
