@@ -1,4 +1,3 @@
-import spinners from 'cli-spinners';
 import {
   AnalysisResult,
   generateImpactTree,
@@ -21,19 +20,16 @@ const COLORS = {
 } as const;
 
 /**
- * Simple spinner implementation for CLI progress indication
+ * Simple spinner implementation for CLI progress indication using dots spinner
  */
 export class Spinner {
   private spinner: NodeJS.Timeout | null = null;
-  private frames: string[];
-  private interval: number;
+  private frames: string[] = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+  private interval: number = 80;
   private currentFrame = 0;
   private text: string;
 
-  constructor(type: spinners.SpinnerName = 'dots', text = '') {
-    const spinnerData = spinners[type];
-    this.frames = spinnerData.frames;
-    this.interval = spinnerData.interval;
+  constructor(text = '') {
     this.text = text;
   }
 

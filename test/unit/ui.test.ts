@@ -19,7 +19,7 @@ describe('UI Components', () => {
     // Mock timers for spinner testing
     vi.useFakeTimers();
     
-    spinner = new Spinner('dots', 'Testing spinner');
+    spinner = new Spinner('Testing spinner');
   });
 
   afterEach(() => {
@@ -37,7 +37,7 @@ describe('UI Components', () => {
 
   describe('Spinner', () => {
     it('should initialize with correct parameters', () => {
-      const testSpinner = new Spinner('dots', 'Test message');
+      const testSpinner = new Spinner('Test message');
       expect(testSpinner).toBeDefined();
     });
 
@@ -145,7 +145,7 @@ describe('UI Components', () => {
     });
 
     it('should use provided text in animation', () => {
-      const customSpinner = new Spinner('dots', 'Custom text');
+      const customSpinner = new Spinner('Custom text');
       customSpinner.start();
       
       // Advance timers to trigger frame
@@ -160,7 +160,7 @@ describe('UI Components', () => {
     });
 
     it('should handle different spinner types', () => {
-      const lineSpinner = new Spinner('line', 'Line spinner');
+      const lineSpinner = new Spinner('Line spinner');
       expect(() => {
         lineSpinner.start();
         lineSpinner.stop();

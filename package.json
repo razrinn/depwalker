@@ -54,7 +54,6 @@
   },
   "packageManager": "pnpm@10.11.0",
   "dependencies": {
-    "cli-spinners": "^3.2.0",
     "commander": "^14.0.0"
   },
   "devDependencies": {

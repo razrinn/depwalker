@@ -35,7 +35,7 @@ function performAnalysis(options: PerformAnalysisOptions): AnalysisResult {
 
   // Parse git diff
   if (!silent) {
-    spinner = new Spinner('dots', 'Parsing git diff output...');
+    spinner = new Spinner('Parsing git diff output...');
     spinner.start();
   }
   const changedLinesByFile = parseGitDiff(diffOutput);
@@ -50,7 +50,7 @@ function performAnalysis(options: PerformAnalysisOptions): AnalysisResult {
 
   // Create TypeScript program
   if (!silent) {
-    spinner = new Spinner('dots', 'Creating TypeScript program...');
+    spinner = new Spinner('Creating TypeScript program...');
     spinner.start();
   }
   const program = createTsProgram(tsConfigPath);
@@ -65,7 +65,7 @@ function performAnalysis(options: PerformAnalysisOptions): AnalysisResult {
 
   // Build call graph
   if (!silent) {
-    spinner = new Spinner('dots', 'Building call graph from source files...');
+    spinner = new Spinner('Building call graph from source files...');
     spinner.start();
   }
   const callGraph = buildCallGraph(program);
@@ -78,7 +78,7 @@ function performAnalysis(options: PerformAnalysisOptions): AnalysisResult {
 
   // Find changed functions
   if (!silent) {
-    spinner = new Spinner('dots', 'Identifying changed functions...');
+    spinner = new Spinner('Identifying changed functions...');
     spinner.start();
   }
   const changedFunctions = findChangedFunctions(callGraph, changedLinesByFile);
@@ -104,7 +104,7 @@ function performAnalysis(options: PerformAnalysisOptions): AnalysisResult {
   if (includeVariables) {
     // Build variable graph
     if (!silent) {
-      spinner = new Spinner('dots', 'Building variable dependency graph...');
+      spinner = new Spinner('Building variable dependency graph...');
       spinner.start();
     }
     const variableGraph = buildVariableGraph(program);
@@ -117,7 +117,7 @@ function performAnalysis(options: PerformAnalysisOptions): AnalysisResult {
 
     // Find changed variables
     if (!silent) {
-      spinner = new Spinner('dots', 'Identifying changed variables...');
+      spinner = new Spinner('Identifying changed variables...');
       spinner.start();
     }
     const changedVariables = findChangedVariables(
@@ -177,7 +177,7 @@ function analyzeProject(options: AnalyzeProjectOptions = {}): void {
 
     // Fetch git diff
     if (!isJsonFormat) {
-      spinner = new Spinner('dots', 'Fetching git diff...');
+      spinner = new Spinner('Fetching git diff...');
       spinner.start();
     }
     const diffOutput = getGitDiff();
