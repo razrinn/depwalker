@@ -1,5 +1,4 @@
-import * as ts from 'typescript';
-import * as path from 'path';
+import ts from 'typescript';
 
 // Mock TypeScript source files for testing
 export const SAMPLE_BUTTON_COMPONENT = `
@@ -44,7 +43,7 @@ import { Button } from './Button';
 export const Header = () => {
   const now = new Date();
   const formattedDate = formatDate(now);
-  
+
   const handleMenuClick = () => {
     console.log('Menu clicked');
   };
@@ -59,7 +58,10 @@ export const Header = () => {
 `;
 
 // Helper to create mock source files
-export function createMockSourceFile(content: string, fileName: string): ts.SourceFile {
+export function createMockSourceFile(
+  content: string,
+  fileName: string
+): ts.SourceFile {
   return ts.createSourceFile(
     fileName,
     content,
@@ -98,7 +100,8 @@ export function createMockProgram(): ts.Program {
     getCurrentDirectory: () => process.cwd(),
     getDirectories: () => [],
     fileExists: (fileName: string) => fileName in MOCK_FILES,
-    readFile: (fileName: string) => MOCK_FILES[fileName as keyof typeof MOCK_FILES],
+    readFile: (fileName: string) =>
+      MOCK_FILES[fileName as keyof typeof MOCK_FILES],
     getCanonicalFileName: (fileName: string) => fileName,
     useCaseSensitiveFileNames: () => true,
     getNewLine: () => '\n',

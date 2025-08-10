@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import packageJson from '../package.json';
+import packageJson from '../package.json' with { type: 'json' };
 import {
   getGitDiff,
   parseGitDiff,
@@ -11,8 +11,8 @@ import {
   findChangedFunctions,
   findChangedVariables,
   AnalysisResult,
-} from './analyzer';
-import { printAnalysisResults, Spinner } from './ui';
+} from './analyzer.js';
+import { printAnalysisResults, Spinner } from './ui.js';
 
 /**
  * Performs the complete analysis with progress indicators
@@ -317,6 +317,6 @@ cli
   });
 
 // Only run CLI if this file is executed directly
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   cli.parse();
 }

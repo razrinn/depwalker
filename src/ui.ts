@@ -4,7 +4,7 @@ import {
   generateImpactTree,
   truncatePath,
   VariableUsage,
-} from './analyzer';
+} from './analyzer.js';
 
 /**
  * Centralized color configuration using original tree format colors
@@ -30,7 +30,7 @@ export class Spinner {
   private currentFrame = 0;
   private text: string;
 
-  constructor(type: keyof typeof spinners = 'dots', text = '') {
+  constructor(type: spinners.SpinnerName = 'dots', text = '') {
     const spinnerData = spinners[type];
     this.frames = spinnerData.frames;
     this.interval = spinnerData.interval;
@@ -102,14 +102,16 @@ interface PrintAnalysisResultsOptions {
   groupByFile?: boolean;
 }
 
-export function printAnalysisResults(options: PrintAnalysisResultsOptions): void {
+export function printAnalysisResults(
+  options: PrintAnalysisResultsOptions
+): void {
   const {
     result,
     maxDepth = null,
     format = 'tree',
     compact = false,
     maxNodes = null,
-    groupByFile = true
+    groupByFile = true,
   } = options;
   const {
     changedFiles,
@@ -179,7 +181,7 @@ function printTreeFormat(options: PrintTreeFormatOptions): void {
     maxDepth = null,
     compact = false,
     maxNodes = null,
-    groupByFile = true
+    groupByFile = true,
   } = options;
   const { changedFunctions, callGraph, changedVariables, variableGraph } =
     result;
@@ -208,7 +210,7 @@ function printTreeFormat(options: PrintTreeFormatOptions): void {
       nodeCounter,
       maxNodes,
       compact,
-      groupByFile
+      groupByFile,
     });
     lines.forEach((line) => {
       // Apply colors to the output
@@ -470,7 +472,7 @@ function printTreeFormat(options: PrintTreeFormatOptions): void {
                 nodeCounter: { count: 0 },
                 maxNodes: maxNodes ? Math.min(10, maxNodes) : 10, // Limit nodes for variables
                 compact: true, // Use compact mode for variables
-                groupByFile
+                groupByFile,
               });
               subLines.slice(0, 5).forEach((line) => {
                 // Limit to 5 lines
@@ -504,10 +506,7 @@ interface PrintListFormatOptions {
 }
 
 function printListFormat(options: PrintListFormatOptions): void {
-  const {
-    result,
-    maxDepth = null
-  } = options;
+  const { result, maxDepth = null } = options;
   const { changedFunctions, callGraph, changedVariables, variableGraph } =
     result;
   const colors = COLORS;

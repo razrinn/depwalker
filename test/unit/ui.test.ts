@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { Spinner } from '../../src/ui';
+import { Spinner } from '../../src/ui.js';
 
 describe('UI Components', () => {
   let spinner: Spinner;

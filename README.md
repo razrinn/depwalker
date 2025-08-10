@@ -19,7 +19,7 @@ A comprehensive TypeScript-based dependency analysis tool that tracks the impact
 
 ## 📦 Installation
 
-**Prerequisites:** Node.js (v20+) and Git
+**Prerequisites:** Node.js (v18+) and Git
 
 ### Quick Start (Recommended)
 
@@ -175,7 +175,6 @@ jobs:
 ```bash
 depwalker --format json > analysis-report.json
 ```
-
 
 ## 🏗️ How It Works
 

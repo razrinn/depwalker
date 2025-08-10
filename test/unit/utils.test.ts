@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { truncatePath, getFunctionId, getVariableId } from '../../src/analyzer';
-import { createMockSourceFile } from '../fixtures/sample-ts-files';
+import { truncatePath, getFunctionId, getVariableId } from '../../src/analyzer.js';
+import { createMockSourceFile } from '../fixtures/sample-ts-files.js';
 import * as ts from 'typescript';
 
 describe('Utility Functions', () => {

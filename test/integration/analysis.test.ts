@@ -1,10 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import { parseGitDiff, generateImpactTree } from '../../src/analyzer';
+import { parseGitDiff, generateImpactTree } from '../../src/analyzer.js';
 import {
   SIMPLE_DIFF,
   MULTIPLE_FILES_DIFF,
   EXPECTED_PARSED_RESULTS,
-} from '../fixtures/sample-git-diff';
+} from '../fixtures/sample-git-diff.js';
 
 describe('Integration Tests - Analysis Pipeline', () => {
   describe('Git Parsing Integration', () => {

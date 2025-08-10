@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { parseGitDiff, getGitDiff } from '../../src/analyzer';
+import { parseGitDiff, getGitDiff } from '../../src/analyzer.js';
 import {
   SIMPLE_DIFF,
   MULTIPLE_FILES_DIFF,
@@ -7,7 +7,7 @@ import {
   EMPTY_DIFF,
   MALFORMED_DIFF,
   EXPECTED_PARSED_RESULTS,
-} from '../fixtures/sample-git-diff';
+} from '../fixtures/sample-git-diff.js';
 
 describe('Git Diff Parser', () => {
   describe('parseGitDiff', () => {
