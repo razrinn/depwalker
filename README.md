@@ -1,10 +1,10 @@
 # 🚶‍♂️ DepWalker
 
-[![npm version](https://badge.fury.io/js/depwalker.svg)](https://badge.fury.io/js/depwalker)
+[![GitHub version](https://badge.fury.io/gh/razrinn%2Fdepwalker.svg)](https://badge.fury.io/gh/razrinn%2Fdepwalker)
 [![npm downloads](https://img.shields.io/npm/dm/depwalker.svg)](https://www.npmjs.com/package/depwalker)
 [![install size](https://packagephobia.com/badge?p=depwalker)](https://packagephobia.com/result?p=depwalker)
 [![Coverage](https://codecov.io/gh/razrinn/depwalker/branch/main/graph/badge.svg)](https://codecov.io/gh/razrinn/depwalker)
-[![Tests](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml)
+[![Pipeline](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml)
 
 A comprehensive TypeScript-based dependency analysis tool that tracks the impact of code changes across your codebase. DepWalker analyzes your Git changes and shows you which functions and variables are affected, along with their dependency chains and usage patterns.
 
