@@ -1,10 +1,9 @@
 # 🚶‍♂️ DepWalker
 
-[![GitHub version](https://badge.fury.io/gh/razrinn%2Fdepwalker.svg)](https://badge.fury.io/gh/razrinn%2Fdepwalker)
+[![GitHub version](https://badge.fury.io/gh/razrinn%2Fdepwalker-ts.svg)](https://badge.fury.io/gh/razrinn%2Fdepwalker-ts)
 [![npm downloads](https://img.shields.io/npm/dm/depwalker.svg)](https://www.npmjs.com/package/depwalker)
 [![install size](https://packagephobia.com/badge?p=depwalker)](https://packagephobia.com/result?p=depwalker)
-[![Coverage](https://codecov.io/gh/razrinn/depwalker/branch/main/graph/badge.svg)](https://codecov.io/gh/razrinn/depwalker)
-[![Pipeline](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml)
+[![Pipeline](https://github.com/razrinn/depwalker-ts/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/razrinn/depwalker-ts/actions/workflows/ci-cd.yml)
 
 A comprehensive TypeScript-based dependency analysis tool that tracks the impact of code changes across your codebase. DepWalker analyzes your Git changes and shows you which functions and variables are affected, along with their dependency chains and usage patterns.
 
@@ -152,7 +151,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: "20"
       - name: Analyze Impact
         run: |
           npx depwalker --format json > impact.json
@@ -190,6 +189,7 @@ depwalker --format html --output dependency-graph.html
 ```
 
 The HTML format generates an interactive dependency graph with:
+
 - Visual node-link graph using vis.js
 - Color-coded nodes for changed functions/variables and their impact levels
 - Interactive controls (zoom, pan, physics simulation)
