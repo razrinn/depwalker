@@ -45,6 +45,10 @@
     "url": "https://github.com/razrinn/depwalker/issues"
   },
   "homepage": "https://github.com/razrinn/depwalker#readme",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
+  },
   "engines": {
     "node": ">=18.0.0"
   },
