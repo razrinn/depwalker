@@ -11,6 +11,9 @@ importers:
       commander:
         specifier: ^14.0.0
         version: 14.0.0
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.2
     devDependencies:
       '@changesets/cli':
         specifier: ^2.29.5
@@ -21,9 +24,6 @@ importers:
       esbuild:
         specifier: ^0.27.2
         version: 0.27.2
-      typescript:
-        specifier: ^5.9.2
-        version: 5.9.2
 
 packages:
 

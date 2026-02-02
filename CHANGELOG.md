@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.2.1
+
+### Patch Changes
+
+- Move TypeScript from devDependencies to dependencies to fix runtime module not found error
+
 ## 0.2.0
 
 ### Minor Changes
