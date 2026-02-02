@@ -117,12 +117,20 @@ Functions identified as: `relative/path/to/file.ts:functionName`
 
 ## Release Process
 
+See [RELEASE.md](./RELEASE.md) for detailed instructions.
+
+### Quick Summary
+
 1. **Make changes** → commit to feature branch
 2. **Add changeset**: `pnpm changeset` (select patch/minor/major)
 3. **Commit changeset** with changes
 4. **Create PR** → main branch
-5. **Merge PR** → CI builds
-6. **Merge "Version Packages" PR** → publishes to npm
+5. **Merge PR** → CI creates "Version Packages" PR
+6. **Merge "Version Packages" PR** → version is bumped
+7. **Publish locally**: `pnpm build && npm publish --access public`
+8. **Create git tag**: `git tag -a vX.X.X -m "Release vX.X.X" && git push origin vX.X.X`
+
+**Note**: We currently use local publishing. CI-based OIDC publishing is experimental (see RELEASE.md).
 
 ## Dependencies
 
