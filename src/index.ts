@@ -164,6 +164,4 @@ cli
     });
   });
 
-if (import.meta.url === `file://${process.argv[1]}`) {
-  cli.parse();
-}
+cli.parse();
