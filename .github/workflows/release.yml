@@ -12,7 +12,6 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: write
-      pull-requests: write
       id-token: write # Required for OIDC with npm
 
     steps:
@@ -21,21 +20,17 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Setup pnpm
-        uses: pnpm/action-setup@v4
-        with:
-          version: 10.11.0
-
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          registry-url: 'https://registry.npmjs.org' # Required for OIDC
 
       - name: Install Dependencies
-        run: pnpm install --frozen-lockfile
+        run: npm ci
 
       - name: Build Package
-        run: pnpm build
+        run: npm run build
 
       - name: Check if version exists on npm
         id: check_version
@@ -54,15 +49,8 @@ jobs:
 
       - name: Publish to npm with OIDC
         if: steps.check_version.outputs.should_publish == 'true'
-        run: |
-          # Configure npm registry
-          npm config set registry https://registry.npmjs.org
-          # Publish with provenance using OIDC
-          npm publish --provenance --access public
-        env:
-          # OIDC token is automatically provided by GitHub Actions
-          # These env vars are used by npm to authenticate via OIDC
-          NPM_CONFIG_REGISTRY: https://registry.npmjs.org
+        run: npm publish --provenance --access public
+        # OIDC auth is automatic with registry-url + id-token: write
 
       - name: Create Git Tag
         if: steps.check_version.outputs.should_publish == 'true'
