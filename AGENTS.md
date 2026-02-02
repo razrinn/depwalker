@@ -21,7 +21,8 @@ DepWalker is a comprehensive TypeScript dependency analysis CLI tool that tracks
 | Language | TypeScript 5.9+ |
 | Runtime | Node.js 18+ |
 | Package Manager | pnpm 10.11.0 |
-| Build Tool | TypeScript Compiler (tsc) |
+| Build Tool | TypeScript Compiler (tsc) + esbuild |
+| Bundler | esbuild (for CLI bundling) |
 | CLI Framework | Commander.js |
 | Release Management | Changesets |
 
@@ -33,12 +34,51 @@ depwalker/
 │   ├── index.ts             # CLI entry point (Commander.js setup)
 │   ├── analyzer.ts          # Core analysis logic (Git parsing, AST analysis)
 │   └── ui.ts                # Output formatting, spinners, HTML generation
-├── dist/                     # Compiled JavaScript output (gitignored)
+├── scripts/                  # Build scripts
+│   └── build.js             # esbuild bundler script with version injection
+├── dist/                     # Compiled & bundled JavaScript output (gitignored)
 ├── .changeset/               # Changeset files for versioning
 ├── .github/workflows/        # CI/CD pipelines
 ├── package.json             # Dependencies and scripts
 ├── tsconfig.json            # TypeScript configuration
 └── AGENTS.md                # This file
+```
+
+## Build Process
+
+The project uses a two-stage build process:
+
+1. **TypeScript Compilation**: `tsc` compiles `.ts` files to `.js` in `dist/`
+2. **Bundling**: `esbuild` bundles all modules into a single `dist/index.js` file
+
+### Why Bundle?
+
+- **Symlink compatibility**: Bundled file works when run through `node_modules/.bin/` symlinks
+- **No relative import issues**: All code in one file eliminates ESM relative import problems
+- **Version injection**: Build script reads version from `package.json` and injects it via esbuild's `define`
+
+### Build Script (`scripts/build.js`)
+
+```javascript
+// Reads version from package.json
+const pkg = JSON.parse(readFileSync('package.json'));
+
+// Injects version at build time
+esbuild({
+  define: {
+    'process.env.PKG_VERSION': JSON.stringify(pkg.version),
+  },
+});
+```
+
+### Source Code Pattern
+
+```typescript
+// src/index.ts - uses placeholder
+const VERSION = process.env.PKG_VERSION || '0.0.0';
+
+// dist/index.js - after build, version is inlined
+const VERSION = "0.1.3";
 ```
 
 ## Build and Development Commands
@@ -220,6 +260,7 @@ relative/path/to/file.ts:functionName
 
 ### Development
 - `typescript`: TypeScript compiler
+- `esbuild`: Bundler for CLI single-file output
 - `@changesets/cli`: Version management
 - `@types/node`: Node.js type definitions
 
