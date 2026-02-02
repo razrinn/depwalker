@@ -86,9 +86,7 @@ jobs:
           setupGitUser: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Use NPM_TOKEN for first publish, remove after package exists and use NPM_CONFIG_PROVENANCE instead
-          NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true # Enable provenance attestations
+          NPM_CONFIG_PROVENANCE: true # Enable provenance attestations (uses OIDC)
 
       - name: Send notification if published
         if: steps.changesets.outputs.published == 'true'
