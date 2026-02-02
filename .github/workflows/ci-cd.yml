@@ -52,13 +52,11 @@ jobs:
       contents: write
       pull-requests: write
       id-token: write # Required for OIDC with npm
-    environment: production # Optional: link to GitHub Environment for extra security
 
     steps:
       - name: Checkout Repo
         uses: actions/checkout@v4
         with:
-          # This makes Actions fetch all Git history so that Changesets can generate changelogs with the correct commits
           fetch-depth: 0
 
       - name: Setup pnpm
@@ -70,11 +68,13 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "pnpm"
           registry-url: "https://registry.npmjs.org"
 
       - name: Install Dependencies
         run: pnpm install --frozen-lockfile
+
+      - name: Build Package
+        run: pnpm build
 
       - name: Create Release Pull Request or Publish to npm
         id: changesets
@@ -86,12 +86,4 @@ jobs:
           setupGitUser: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          NPM_CONFIG_PROVENANCE: true # Enable provenance attestations (uses OIDC)
-
-      - name: Send notification if published
-        if: steps.changesets.outputs.published == 'true'
-        run: |
-          VERSION=$(node -p "require('./package.json').version")
-          echo "🎉 Successfully published v$VERSION to npm!"
-          echo "📦 Package: https://www.npmjs.com/package/depwalker"
-          echo "🏷️ Git tag v$VERSION was automatically created by changesets"
+          NPM_CONFIG_PROVENANCE: true
