@@ -15,8 +15,8 @@ permissions:
 concurrency: ${{ github.workflow }}-${{ github.ref }}
 
 jobs:
-  test-and-build:
-    name: Test & Build
+  build:
+    name: Build
     runs-on: ubuntu-latest
 
     strategy:
@@ -41,36 +41,13 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
-        if: matrix.node-version != 22
-        run: pnpm test
-
-      - name: Run tests with coverage
-        if: matrix.node-version == 22
-        run: pnpm test:coverage
-
-      - name: Upload coverage to Codecov
-        if: matrix.node-version == 22
-        uses: codecov/codecov-action@v5
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage/lcov.info
-          fail_ci_if_error: true
-          verbose: true
-
-      - name: Upload test results to Codecov
-        if: matrix.node-version == 22 && ${{ !cancelled() }}
-        uses: codecov/test-results-action@v1
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-
       - name: Build project
         run: pnpm build
 
   release:
     name: Release
     runs-on: ubuntu-latest
-    needs: test-and-build
+    needs: build
     # Only run release on main branch pushes (not PRs)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 

@@ -1,20 +1,18 @@
 # 🚶‍♂️ DepWalker
 
-[![GitHub version](https://badge.fury.io/gh/razrinn%2Fdepwalker-ts.svg)](https://badge.fury.io/gh/razrinn%2Fdepwalker-ts)
+[![npm version](https://badge.fury.io/js/depwalker.svg)](https://www.npmjs.com/package/depwalker)
 [![npm downloads](https://img.shields.io/npm/dm/depwalker.svg)](https://www.npmjs.com/package/depwalker)
-[![install size](https://packagephobia.com/badge?p=depwalker)](https://packagephobia.com/result?p=depwalker)
 [![Pipeline](https://github.com/razrinn/depwalker-ts/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/razrinn/depwalker-ts/actions/workflows/ci-cd.yml)
 
-A comprehensive TypeScript-based dependency analysis tool that tracks the impact of code changes across your codebase. DepWalker analyzes your Git changes and shows you which functions and variables are affected, along with their dependency chains and usage patterns.
+A TypeScript dependency analysis tool that tracks the impact of code changes. DepWalker analyzes Git changes and shows which functions are affected, along with their dependency chains.
 
 ## 🎯 Use Cases
 
-- **Impact Analysis**: Understand which functions and components are affected by your changes
+- **Impact Analysis**: Understand which functions are affected by your changes
 - **Pre-commit Review**: See the scope of impact before committing changes
 - **Test Planning**: Identify which parts need testing after modifications
 - **Refactoring Safety**: Verify dependencies when refactoring shared code
-- **Configuration Changes**: Track how variable/constant changes affect dependent code
-- **Large Codebases**: Use depth limits and filters for focused analysis in complex projects
+- **Code Review**: Share impact analysis as Markdown with your team or AI assistants
 
 ## 📦 Installation
 
@@ -22,229 +20,88 @@ A comprehensive TypeScript-based dependency analysis tool that tracks the impact
 
 ### Quick Start (Recommended)
 
-Run directly without installation:
-
 ```bash
 npx depwalker
-# or with advanced options
-npx depwalker --depth 3 --format tree --compact --tsconfig ./tsconfig.prod.json
 ```
 
-### Project-level Installation
-
-Install as a dev dependency in your project:
+### Project Installation
 
 ```bash
 npm install --save-dev depwalker
 # or
 pnpm add -D depwalker
-# or
-yarn add -D depwalker
-
-# Then run with npm scripts or npx
-npx depwalker
-```
-
-### Global Installation
-
-```bash
-npm install -g depwalker
-# Then run
-depwalker
 ```
 
 ## 🚀 Usage
 
-Run DepWalker in your TypeScript project directory with uncommitted changes:
-
-### Basic Usage
+Run DepWalker in your TypeScript project with uncommitted changes:
 
 ```bash
-# Basic usage
+# Basic usage - outputs Markdown report
 npx depwalker
 
-# With depth limit (useful for large codebases)
-depwalker --depth 3
+# Limit analysis depth
+npx depwalker --depth 3
 
-# With custom tsconfig.json location
-depwalker --tsconfig ./custom-tsconfig.json
+# Custom tsconfig location
+npx depwalker --tsconfig ./custom-tsconfig.json
 
-# Combining options
-depwalker --depth 2 --tsconfig ./build/tsconfig.prod.json
-```
-
-### Advanced Usage
-
-```bash
-# Output formats
-depwalker --format tree    # Tree view
-depwalker --format json    # JSON for CI/CD
-depwalker --format html    # Interactive HTML graph
-
-# Save output to file
-depwalker --format html --output dependency-graph.html
-depwalker --format json --output analysis.json
-depwalker --format tree --output report.txt
-
-# Large codebase options
-depwalker --compact --max-nodes 50
-depwalker --no-variables   # Functions only
-
-# Combined options
-depwalker --depth 3 --format tree --compact --tsconfig ./tsconfig.json
-```
-
-### Pre-commit Integration
-
-Add to your `package.json`:
-
-```json
-{
-  "scripts": {
-    "pre-commit": "depwalker --depth 3",
-    "commit-check": "npm run pre-commit && echo 'Ready to commit!'"
-  }
-}
-```
-
-Run before committing:
-
-```bash
-npm run commit-check
-```
-
-### CI/CD Integration
-
-DepWalker's JSON output mode is designed for automated workflows and CI/CD pipelines. The JSON format produces clean output without any console messages, making it perfect for file redirection and processing.
-
-**Basic CI/CD Usage:**
-
-```bash
-# Generate analysis report
-depwalker --format json > analysis-report.json
-
-# Check if high-impact changes exist
-HIGH_IMPACT=$(depwalker --format json | jq '.functions[] | select(.dependentCount > 5) | length')
-if [ "$HIGH_IMPACT" -gt 0 ]; then
-  echo "⚠️  High-impact changes detected. Consider additional testing."
-fi
-
-# Extract only changed function names
-depwalker --format json | jq -r '.functions[].function'
-
-# Get files with variable changes
-depwalker --format json | jq -r '.variables[] | .file' | sort -u
-```
-
-**GitHub Actions Example:**
-
-```yaml
-name: Impact Analysis
-on: [pull_request]
-jobs:
-  analyze:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-        with:
-          fetch-depth: 0
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: "20"
-      - name: Analyze Impact
-        run: |
-          npx depwalker --format json > impact.json
-          echo "## 📊 Impact Analysis" >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`json" >> $GITHUB_STEP_SUMMARY
-          cat impact.json >> $GITHUB_STEP_SUMMARY
-          echo "\`\`\`" >> $GITHUB_STEP_SUMMARY
+# Save to file
+npx depwalker --output impact-report.md
 ```
 
 ### Example Output
 
-**Tree Format:**
+```markdown
+# Dependency Impact Analysis
 
+## Summary
+| Metric | Value |
+|--------|-------|
+| Changed Files | 2 |
+| Changed Functions | 5 |
+| High Impact (6+ dependents) | 1 |
+| Medium Impact (3-5) | 2 |
+
+## Changed Files
+- `src/utils/helpers.ts`
+- `src/components/Button.tsx`
+
+## Most Impacted Changes
+| Function | File | Dependents |
+|----------|------|------------|
+| **handleClick** | `src/components/Button.tsx` | 8 |
+| **formatDate** | `src/utils/helpers.ts` | 4 |
+
+## Detailed Impact
+
+### src/components/Button.tsx
+
+#### `handleClick`
+- **Location**: `src/components/Button.tsx:23`
+- **Dependents**: 8
+- **Impact**: 🔴 High
+
+**Impact Chain:**
+- **SubmitForm** (`src/forms/SubmitForm.tsx:45`)
+  - **ModalDialog** (`src/dialogs/ModalDialog.tsx:12`)
 ```
-🚀 DepWalker - TypeScript Dependency Analysis
-✓ Analysis complete - 3 changed functions identified
 
-🎯 Change Source: handleClick (line ~23)
-    ├── ButtonGroup in src/components/ButtonGroup.tsx
-    └── Toolbar in src/components/Toolbar.tsx
-        └── MainLayout in src/layouts/MainLayout.tsx
-```
+## 🔧 Options
 
-**JSON Format** (for CI/CD):
-
-```bash
-depwalker --format json > analysis-report.json
-```
-
-**HTML Format** (Interactive Graph):
-
-```bash
-depwalker --format html --output dependency-graph.html
-# Open dependency-graph.html in your browser
-```
-
-The HTML format generates an interactive dependency graph with:
-
-- Visual node-link graph using vis.js
-- Color-coded nodes for changed functions/variables and their impact levels
-- Interactive controls (zoom, pan, physics simulation)
-- Click on nodes to see detailed information
-- Responsive design with shadcn/ui color theme
-
-## 🏗️ How It Works
-
-1. **Git Analysis**: Fetches uncommitted changes via `git diff`
-2. **TypeScript Parsing**: Uses TypeScript Compiler API to build function call and variable usage graphs
-3. **Impact Analysis**: Traverses dependency graphs to find affected functions and variables
-4. **Smart Output**: Presents results with file grouping, circular reference detection, and impact statistics
-
-## 🔧 Configuration
-
-### Command Line Options
-
-**Core Options:**
-
-- `-d, --depth <number>` - Maximum analysis depth. Default: no limit
-- `-t, --tsconfig <path>` - TypeScript config file path. Default: ./tsconfig.json
-- `-f, --format <type>` - Output format: `list`, `tree`, `json`, `html`. Default: `list`
-- `-o, --output <file>` - Save output to a file instead of printing to console
-
-**Display Options:**
-
-- `--compact` - Reduce duplicate references
-- `--max-nodes <number>` - Limit total output nodes
-- `--no-file-grouping` - Show functions separately
-- `--no-variables` - Functions only, skip variables
-
-**Examples:**
-
-```bash
-depwalker --depth 3 --compact
-depwalker --format json > report.json
-depwalker --tsconfig ./tsconfig.prod.json
-```
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-d, --depth <n>` | Maximum analysis depth | No limit |
+| `-t, --tsconfig <path>` | TypeScript config path | `./tsconfig.json` |
+| `-o, --output <file>` | Save report to file | Print to console |
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please see our [CONTRIBUTING.md](CONTRIBUTING.md) file for detailed guidelines on how to contribute to this project.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development and release workflow.
 
 ## 📄 License
 
-This project is licensed under the ISC License - see the [LICENSE](LICENSE) file for details.
-
-## 👤 Author
-
-Ray Azrin Karim
-
-## 🙏 Acknowledgments
-
-- Built with TypeScript Compiler API
-- Inspired by the need for better impact analysis in large codebases
+ISC License - see [LICENSE](LICENSE)
 
 ---
 
