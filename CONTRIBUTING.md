@@ -2,30 +2,21 @@
 
 ## Development Setup
 
-1. **Clone and setup**:
+```bash
+git clone https://github.com/razrinn/depwalker.git
+cd depwalker
+pnpm install
+```
 
-   ```bash
-   git clone https://github.com/razrinn/depwalker.git
-   cd depwalker
-   pnpm install
-   ```
+## Development Commands
 
-2. **Development**:
-
-   ```bash
-   pnpm dev          # Watch mode for TypeScript compilation
-   ```
-
-3. **Building**:
-   ```bash
-   pnpm build        # Build for production
-   ```
+- `pnpm dev` - Watch mode for TypeScript compilation
+- `pnpm build` - Build for production
+- `pnpm depwalker` - Run the CLI locally
 
 ## Contribution Workflow
 
 ### 1. Make Changes
-
-Create a feature branch and make your changes:
 
 ```bash
 git checkout -b feature/my-feature
@@ -34,18 +25,18 @@ git checkout -b feature/my-feature
 
 ### 2. Add a Changeset
 
-Every PR that changes code should include a changeset:
+**Required for all code changes:**
 
 ```bash
 pnpm changeset
 ```
 
-Select the appropriate version bump:
-- **patch**: Bug fixes (0.1.0 → 0.1.1)
-- **minor**: New features (0.1.0 → 0.2.0)
-- **major**: Breaking changes (0.1.0 → 1.0.0)
+Select version bump:
+- **patch**: Bug fixes (0.2.2 → 0.2.3)
+- **minor**: New features (0.2.2 → 0.3.0)
+- **major**: Breaking changes (0.2.2 → 1.0.0)
 
-### 3. Commit & Push
+### 3. Submit PR
 
 ```bash
 git add .
@@ -53,56 +44,28 @@ git commit -m "feat: your feature description"
 git push origin feature/my-feature
 ```
 
-### 4. Create Pull Request
-
-Create a PR to the `main` branch. The CI will run tests on Node.js 18, 20, and 22.
+Create PR to `main`. CI runs tests on Node.js 18, 20, 22.
 
 ---
 
-## Release Workflow (Maintainers Only)
+## Release Process (Automated)
 
-After contributor PRs are merged:
+### For Maintainers
 
-### Step 1: Version Packages PR (Automated)
+After merging contributor PRs:
 
-When changesets exist on `main`, CI automatically creates a **"Version Packages"** PR:
-- Bumps version in `package.json`
-- Updates `CHANGELOG.md`
-- Consumes changeset files
+1. **CI automatically creates** "Version Packages" PR
+   - Bumps version in `package.json`
+   - Updates `CHANGELOG.md`
 
-**Action:** Review and merge this PR when ready to release.
+2. **Review & merge** the "Version Packages" PR
 
-### Step 2: Publish Locally
+3. **Auto-release triggers:**
+   - Publishes to npm
+   - Creates git tag
+   - Done! ✅
 
-After merging the Version Packages PR:
-
-```bash
-# Get latest changes
-git checkout main
-git pull origin main
-
-# Install and build
-pnpm install
-pnpm build
-
-# Login to npm (if needed)
-npm login
-
-# Publish
-npm publish --access public
-```
-
-### Step 3: Create Git Tag
-
-```bash
-# Create and push tag
-git tag -a "v$(node -p "require('./package.json').version')" -m "Release v$(node -p "require('./package.json').version')"
-git push origin "v$(node -p "require('./package.json').version')"
-```
-
-**Note:** We use local publishing for reliability. See [RELEASE.md](RELEASE.md) for details and troubleshooting.
-
----
+See [RELEASE.md](RELEASE.md) for detailed setup and troubleshooting.
 
 ## Project Structure
 
@@ -116,16 +79,5 @@ depwalker/
 │   └── types.ts        # Type definitions
 ├── dist/               # Compiled output
 ├── .changeset/         # Changeset files
-├── .github/workflows/  # CI/CD
-├── package.json
-├── tsconfig.json
-└── README.md
+└── .github/workflows/  # CI/CD
 ```
-
-## Available Scripts
-
-- `pnpm dev` - Watch mode for development
-- `pnpm build` - Build for production
-- `pnpm changeset` - Create a new changeset
-- `pnpm version-packages` - Version packages (updates version from changesets)
-- `pnpm depwalker` - Run the CLI locally

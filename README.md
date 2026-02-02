@@ -100,43 +100,33 @@ npx depwalker --output impact-report.md
 | `-t, --tsconfig <path>` | TypeScript config path | `./tsconfig.json` |
 | `-o, --output <file>`   | Save report to file    | Print to console  |
 
-## 🤝 Contributing & Releasing
+## 🤝 Contributing
 
-### For Contributors
+### Quick Start for Contributors
 
-1. **Fork & clone** the repository
-2. **Create a branch**: `git checkout -b feature/my-feature`
-3. **Make changes** and add a changeset:
-   ```bash
-   pnpm changeset
-   # Select patch/minor/major and describe your changes
-   ```
-4. **Commit** your changes including the changeset file
-5. **Push** and create a Pull Request to `main`
+```bash
+git clone https://github.com/razrinn/depwalker.git
+cd depwalker && pnpm install
+git checkout -b feature/my-feature
+# Make changes
+pnpm changeset  # Add changeset
+pnpm build      # Test build
+git commit -m "feat: description"
+git push origin feature/my-feature
+# Create PR
+```
 
-### For Maintainers (Releasing)
+### Release Process (Fully Automated)
 
-See [RELEASE.md](RELEASE.md) for detailed instructions.
+| Step | Who | Action |
+|------|-----|--------|
+| 1 | Contributor | Add changeset + PR |
+| 2 | Maintainer | Merge PR |
+| 3 | CI | Create "Version Packages" PR |
+| 4 | Maintainer | Merge "Version Packages" PR |
+| 5 | CI | **Auto-publish to npm + create tag** ✅ |
 
-**Quick Release Flow:**
-
-1. **Merge contributor PRs** (changesets are included)
-2. **CI automatically creates** "Version Packages" PR
-3. **Review & merge** the "Version Packages" PR → version is bumped
-4. **Publish locally:**
-   ```bash
-   git checkout main && git pull
-   pnpm install
-   pnpm build
-   npm publish --access public
-   ```
-5. **Create git tag:**
-   ```bash
-   git tag -a "v$(node -p "require('./package.json').version')" -m "Release v$(node -p "require('./package.json').version')"
-   git push origin "v$(node -p "require('./package.json').version')"
-   ```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup details.
+See [CONTRIBUTING.md](CONTRIBUTING.md) and [RELEASE.md](RELEASE.md) for details.
 
 ## 📄 License
 
