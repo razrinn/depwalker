@@ -100,9 +100,43 @@ npx depwalker --output impact-report.md
 | `-t, --tsconfig <path>` | TypeScript config path | `./tsconfig.json` |
 | `-o, --output <file>`   | Save report to file    | Print to console  |
 
-## 🤝 Contributing
+## 🤝 Contributing & Releasing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development and release workflow.
+### For Contributors
+
+1. **Fork & clone** the repository
+2. **Create a branch**: `git checkout -b feature/my-feature`
+3. **Make changes** and add a changeset:
+   ```bash
+   pnpm changeset
+   # Select patch/minor/major and describe your changes
+   ```
+4. **Commit** your changes including the changeset file
+5. **Push** and create a Pull Request to `main`
+
+### For Maintainers (Releasing)
+
+See [RELEASE.md](RELEASE.md) for detailed instructions.
+
+**Quick Release Flow:**
+
+1. **Merge contributor PRs** (changesets are included)
+2. **CI automatically creates** "Version Packages" PR
+3. **Review & merge** the "Version Packages" PR → version is bumped
+4. **Publish locally:**
+   ```bash
+   git checkout main && git pull
+   pnpm install
+   pnpm build
+   npm publish --access public
+   ```
+5. **Create git tag:**
+   ```bash
+   git tag -a "v$(node -p "require('./package.json').version')" -m "Release v$(node -p "require('./package.json').version')"
+   git push origin "v$(node -p "require('./package.json').version')"
+   ```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup details.
 
 ## 📄 License
 
