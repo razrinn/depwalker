@@ -1,6 +1,6 @@
 {
   "name": "depwalker",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "description": "A comprehensive TypeScript dependency analysis tool that tracks the impact of code changes, including function calls and variable usage across your codebase",
   "type": "module",
   "main": "dist/index.js",

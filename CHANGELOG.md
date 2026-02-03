@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.3.4
+
+### Patch Changes
+
+- be6beea: fix oidc
+
 ## 0.3.3
 
 ### Patch Changes
