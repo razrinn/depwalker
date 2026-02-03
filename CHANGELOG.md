@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.3.5
+
+### Patch Changes
+
+- 90bc317: debug release
+
 ## 0.3.4
 
 ### Patch Changes
