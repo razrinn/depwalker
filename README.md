@@ -70,8 +70,11 @@ npx depwalker --output impact-report.md
 | --------------------------- | ----- |
 | Changed Files               | 2     |
 | Changed Functions           | 5     |
-| High Impact (6+ dependents) | 1     |
-| Medium Impact (3-5)         | 2     |
+| 🔴 Critical Impact (20+)    | 0     |
+| 🟠 High Impact (10-19)      | 1     |
+| 🟡 Medium Impact (4-9)      | 2     |
+| 🟢 Low Impact (1-3)         | 1     |
+| ⚪ No Impact                | 1     |
 
 ## Changed Files
 
@@ -80,10 +83,10 @@ npx depwalker --output impact-report.md
 
 ## Most Impacted Changes
 
-| Function        | File                        | Dependents |
-| --------------- | --------------------------- | ---------- |
-| **handleClick** | `src/components/Button.tsx` | 8          |
-| **formatDate**  | `src/utils/helpers.ts`      | 4          |
+| Function        | File                        | Score | Dependents | Depth |
+| --------------- | --------------------------- | ----- | ---------- | ----- |
+| **handleClick** | `src/components/Button.tsx` | 🟠 12 | 8          | 2     |
+| **formatDate**  | `src/utils/helpers.ts`      | 🟡 6  | 4          | 1     |
 
 ## Detailed Impact
 
@@ -92,8 +95,9 @@ npx depwalker --output impact-report.md
 #### `handleClick`
 
 - **Location**: `src/components/Button.tsx:23`
-- **Dependents**: 8
-- **Impact**: 🔴 High
+- **Impact Score**: 12 (8 dependents × depth factor)
+- **Max Chain Depth**: 2 levels
+- **Impact**: 🟠 High
 
 **Impact Chain:**
 
@@ -115,6 +119,39 @@ npx depwalker --output impact-report.md
 
 - **markdown** (default): Clean, structured report perfect for sharing with AI assistants or documentation
 - **html**: Interactive web visualization with Tree view (collapsible hierarchy) and Graph view (node diagram), plus search and filters - best for exploring complex dependency graphs. **Automatically opens in browser** (use `--no-open` to disable).
+
+### Impact Scoring
+
+Impact Score = Dependents + (Depth × 3)
+
+| Level       | Score | Description                                         |
+| ----------- | ----- | --------------------------------------------------- |
+| 🔴 Critical | 20+   | Extreme impact - changes ripple through many levels |
+| 🟠 High     | 10-19 | Significant impact                                  |
+| 🟡 Medium   | 4-9   | Moderate impact                                     |
+| 🟢 Low      | 1-3   | Minimal impact                                      |
+| ⚪ None     | 0     | No external callers                                 |
+
+## 🔌 Plugin Architecture
+
+DepWalker uses a plugin-based architecture for output formats, making it easy to add new output formats:
+
+```typescript
+// Example: Creating a JSON format plugin
+import type { FormatPlugin } from 'depwalker/plugin';
+
+export class JsonFormatPlugin implements FormatPlugin {
+  readonly name = 'json';
+  readonly extension = 'json';
+  readonly contentType = 'application/json';
+
+  generate(result: AnalysisResult, maxDepth: number | null): string {
+    return JSON.stringify(result, null, 2);
+  }
+}
+```
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions on adding new formats.
 
 ## 🤝 Contributing
 

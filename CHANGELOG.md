@@ -1,5 +1,41 @@
 # depwalker
 
+## 0.4.0
+
+### Minor Changes
+
+- Plugin-based architecture refactor for output formats
+
+  ### New Features
+
+  - **Plugin System**: New extensible plugin architecture for output formats
+  - **Format Plugins**: Markdown and HTML outputs are now plugins
+  - **Shared Utilities**: Common impact calculation and tree building logic extracted to shared modules
+
+  ### Changes
+
+  - `src/formatter.ts` reduced from 2207 lines to ~50 lines
+  - New `src/plugin/` directory structure:
+    - `types.ts` - Plugin interface definitions
+    - `registry.ts` - Plugin registry for managing formats
+    - `shared/` - Shared utilities (impact calc, tree building)
+    - `format-markdown/` - Markdown format plugin
+    - `format-html/` - HTML format plugin
+  - Full backward compatibility maintained - existing API unchanged
+
+  ### For Developers
+
+  New formats can be easily added by implementing the `FormatPlugin` interface:
+
+  ```typescript
+  interface FormatPlugin {
+    readonly name: string;
+    readonly extension: string;
+    readonly contentType: string;
+    generate(result: AnalysisResult, maxDepth: number | null): string;
+  }
+  ```
+
 ## 0.3.10
 
 ### Patch Changes

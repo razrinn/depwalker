@@ -11,7 +11,7 @@ DepWalker is a TypeScript dependency analysis CLI tool that tracks the impact of
 - **Function Impact Analysis**: Traces function call chains from changed functions
 - **Git Integration**: Automatically detects uncommitted changes via `git diff`
 - **TypeScript Compiler API**: Uses native TS compiler for accurate AST analysis
-- **Markdown Output**: Clean, structured reports perfect for humans and LLMs
+- **Plugin-Based Output**: Extensible format system with Markdown and HTML plugins built-in
 
 ## Technology Stack
 
@@ -32,8 +32,19 @@ depwalker/
 │   ├── index.ts             # CLI entry point (Commander.js setup)
 │   ├── git.ts               # Git diff parsing
 │   ├── analyzer.ts          # Core analysis logic (AST analysis, call graph)
-│   ├── formatter.ts         # Markdown report generation
-│   └── types.ts             # TypeScript interfaces
+│   ├── formatter.ts         # Formatter entry point (plugin orchestration)
+│   ├── types.ts             # TypeScript interfaces
+│   └── plugin/              # Format plugin system
+│       ├── types.ts         # Plugin interface definitions
+│       ├── registry.ts      # Plugin registry
+│       ├── index.ts         # Plugin exports
+│       ├── shared/          # Shared utilities for plugins
+│       │   ├── utils.ts     # Impact calculation, stats, helpers
+│       │   └── tree-builder.ts  # Tree building for visualization
+│       ├── format-markdown/ # Markdown format plugin
+│       │   └── index.ts
+│       └── format-html/     # HTML format plugin
+│           └── index.ts
 ├── scripts/                  # Build scripts
 │   └── build.js             # esbuild bundler with version injection
 ├── dist/                     # Compiled & bundled output
@@ -87,12 +98,36 @@ type CallGraph = Map<string, FunctionInfo>;
 // "filepath:funcName" -> { callers: CallSite[], definition: { startLine, endLine } }
 ```
 
-#### 4. `src/formatter.ts` - Output Generation
-- `generateMarkdownReport()`: Creates Markdown report
-- `generateHtmlReport()`: Creates interactive HTML report (with Tree and Graph views)
-- `buildImpactTree()`: Builds hierarchical dependency tree
+#### 4. `src/formatter.ts` - Formatter Entry Point
+Thin wrapper that delegates to format plugins:
+- Auto-registers built-in plugins (markdown, html)
+- `generateReport()`: Routes to appropriate plugin
+- Maintains backward compatibility with old API
 
-#### 5. `src/types.ts` - Type Definitions
+#### 5. `src/plugin/` - Plugin System
+
+**Plugin Interface:**
+```typescript
+interface FormatPlugin {
+  readonly name: string;        // Unique identifier (e.g., 'markdown')
+  readonly extension: string;   // File extension (e.g., 'md')
+  readonly contentType: string; // MIME type
+  generate(result: AnalysisResult, maxDepth: number | null): string;
+}
+```
+
+**Plugin Registry:**
+- `registerPlugin()`: Register a new format plugin
+- `getPlugin(name)`: Get plugin by name
+- `getAvailableFormats()`: List all registered formats
+
+**Shared Utilities (`src/plugin/shared/`):**
+- `calculateImpactScore()`: Calculate impact based on breadth and depth
+- `getImpactLevel()`: Convert score to impact level (critical/high/medium/low/none)
+- `buildTreeData()`: Build hierarchical tree for visualization
+- `buildImpactedItems()`: Build list of impacted items with stats
+
+#### 6. `src/types.ts` - Type Definitions
 Core interfaces for the application.
 
 ## Development Conventions
@@ -109,6 +144,7 @@ Core interfaces for the application.
 - `build*`: Functions that construct data structures
 - `find*`: Functions that search/filter data
 - `generate*`: Functions that create formatted output
+- `register*`: Functions that register plugins/components
 
 ### Error Handling
 
@@ -117,6 +153,42 @@ Errors are thrown as `Error` objects with descriptive messages. CLI catches and 
 ### File ID Format
 
 Functions identified as: `relative/path/to/file.ts:functionName`
+
+## Adding a New Output Format
+
+To add a new format (e.g., JSON):
+
+1. **Create plugin directory:**
+   ```
+   src/plugin/format-json/
+   └── index.ts
+   ```
+
+2. **Implement the plugin:**
+   ```typescript
+   import type { AnalysisResult } from '../../types.js';
+   import type { FormatPlugin } from '../types.js';
+   
+   export class JsonFormatPlugin implements FormatPlugin {
+     readonly name = 'json';
+     readonly extension = 'json';
+     readonly contentType = 'application/json';
+     
+     generate(result: AnalysisResult, maxDepth: number | null): string {
+       return JSON.stringify(result, null, 2);
+     }
+   }
+   
+   export const jsonFormatPlugin = new JsonFormatPlugin();
+   ```
+
+3. **Register in `src/formatter.ts`:**
+   ```typescript
+   import { jsonFormatPlugin } from './plugin/format-json/index.js';
+   registerPlugin(jsonFormatPlugin);
+   ```
+
+4. **Update type in `src/types.ts`** (if needed for CLI validation)
 
 ## Release Process
 
@@ -153,6 +225,14 @@ Functions identified as: `relative/path/to/file.ts:functionName`
 1. Add option to CLI in `src/index.ts`
 2. Pass to `runAnalysis()`
 3. Use in analyzer or formatter as needed
+
+### Adding a New Format Plugin
+
+1. Create plugin in `src/plugin/format-<name>/`
+2. Implement `FormatPlugin` interface
+3. Register in `src/formatter.ts`
+4. Update `OutputFormat` type in `src/types.ts`
+5. Add tests and documentation
 
 ### Fixing a Bug
 
