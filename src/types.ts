@@ -17,3 +17,6 @@ export interface AnalysisResult {
   changedFunctions: Map<string, Set<string>>; // filePath -> Set of functionIds
   callGraph: CallGraph;
 }
+
+/** Output format for reports */
+export type OutputFormat = 'markdown' | 'html';

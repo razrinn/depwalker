@@ -68,7 +68,9 @@ pnpm dev      # Watch mode
 **Options:**
 - `--depth <number>`: Maximum analysis depth
 - `--tsconfig <path>`: Custom tsconfig path
-- `--output <file>`: Save report to file
+- `--output <file>`: Save report to file (default: temp file for HTML)
+- `--format <format>`: Output format (`markdown`, `html`)
+- `--no-open`: Disable auto-opening browser for HTML format
 
 #### 2. `src/git.ts` - Git Integration
 - `getGitDiff()`: Runs `git diff -U0 HEAD`
@@ -87,6 +89,7 @@ type CallGraph = Map<string, FunctionInfo>;
 
 #### 4. `src/formatter.ts` - Output Generation
 - `generateMarkdownReport()`: Creates Markdown report
+- `generateHtmlReport()`: Creates interactive HTML report (with Tree and Graph views)
 - `buildImpactTree()`: Builds hierarchical dependency tree
 
 #### 5. `src/types.ts` - Type Definitions

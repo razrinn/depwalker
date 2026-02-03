@@ -1,11 +1,16 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { writeFileSync } from 'fs';
+import { writeFileSync, mkdtempSync, realpathSync } from 'fs';
+import { tmpdir } from 'os';
+import { exec } from 'child_process';
+import { promisify } from 'util';
 import path from 'path';
 import { getGitDiff, parseGitDiff } from './git.js';
 import { createTsProgram, buildCallGraph, findChangedFunctions } from './analyzer.js';
-import { printResults, generateMarkdownReport } from './formatter.js';
-import type { AnalysisResult } from './types.js';
+import { printResults, generateReport } from './formatter.js';
+import type { AnalysisResult, OutputFormat } from './types.js';
+
+const execAsync = promisify(exec);
 
 const VERSION = process.env.PKG_VERSION || '0.0.0';
 
@@ -62,6 +67,21 @@ interface CliOptions {
   depth?: number;
   tsconfig?: string;
   output?: string;
+  format?: OutputFormat;
+  open?: boolean;
+}
+
+async function openBrowser(filePath: string): Promise<void> {
+  const platform = process.platform;
+  const command = platform === 'darwin' ? 'open' :
+                  platform === 'win32' ? 'start' :
+                  'xdg-open';
+  
+  try {
+    await execAsync(`${command} "${filePath}"`);
+  } catch {
+    // Silently fail - user can open manually
+  }
 }
 
 function runAnalysis(options: CliOptions): void {
@@ -69,7 +89,12 @@ function runAnalysis(options: CliOptions): void {
     depth,
     tsconfig = './tsconfig.json',
     output,
+    format = 'markdown',
+    open,
   } = options;
+  
+  // Auto-open browser by default for HTML format unless explicitly disabled
+  const shouldOpen = format === 'html' && open !== false;
 
   const spinner = new Spinner('');
 
@@ -122,13 +147,31 @@ function runAnalysis(options: CliOptions): void {
     };
 
     // Generate report
-    const report = generateMarkdownReport(result, depth ?? null);
+    const report = generateReport(result, format, depth ?? null);
 
     // Output
     if (output) {
       const outputPath = path.resolve(output);
       writeFileSync(outputPath, report, 'utf-8');
       console.log(`\n✅ Report saved to: ${outputPath}`);
+      
+      // Auto-open browser for HTML format
+      if (format === 'html' && shouldOpen) {
+        openBrowser(outputPath);
+      }
+    } else if (format === 'html') {
+      // For HTML without output path, create temp file and open it
+      const tempDir = mkdtempSync(path.join(tmpdir(), 'depwalker-'));
+      const tempPath = path.join(tempDir, 'impact-report.html');
+      writeFileSync(tempPath, report, 'utf-8');
+      
+      if (shouldOpen) {
+        console.log(`\n✅ Opening report in browser...`);
+        openBrowser(tempPath);
+      } else {
+        console.log(`\n✅ Report saved to: ${tempPath}`);
+        console.log(`   (Use --no-open to prevent automatic browser opening)`);
+      }
     } else {
       console.log();
       console.log(report);
@@ -155,12 +198,21 @@ cli
     return n;
   })
   .option('-t, --tsconfig <path>', 'Path to tsconfig.json', './tsconfig.json')
-  .option('-o, --output <file>', 'Save report to file (Markdown format)')
+  .option('-o, --output <file>', 'Save report to file')
+  .option('-f, --format <format>', 'Output format: markdown | html', (v) => {
+    if (v !== 'markdown' && v !== 'html') {
+      throw new Error('Format must be "markdown" or "html"');
+    }
+    return v as OutputFormat;
+  })
+  .option('--no-open', 'Do not automatically open HTML report in browser')
   .action((opts) => {
     runAnalysis({
       depth: opts.depth,
       tsconfig: opts.tsconfig,
       output: opts.output,
+      format: opts.format,
+      open: opts.open,
     });
   });
 
