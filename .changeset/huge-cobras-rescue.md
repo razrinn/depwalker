@@ -1,0 +1,5 @@
+---
+"depwalker": patch
+---
+
+fix oidc

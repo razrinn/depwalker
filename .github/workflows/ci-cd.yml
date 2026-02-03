@@ -117,7 +117,7 @@ jobs:
         run: npm install -g npm@latest
 
       - name: Publish to npm
-        run: NODE_AUTH_TOKEN="" npm publish
+        run: NODE_AUTH_TOKEN="" npm publish --access public --provenance
 
       - name: Create Git Tag
         run: |
