@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.3.7
+
+### Patch Changes
+
+- c09dfbd: oidc
+
 ## 0.3.6
 
 ### Patch Changes
