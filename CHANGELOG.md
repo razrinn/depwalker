@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.3.1
+
+### Patch Changes
+
+- 77b1a1c: fix oidc npm publish issue
+
 ## 0.3.0
 
 ### Minor Changes
