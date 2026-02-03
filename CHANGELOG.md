@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.3.6
+
+### Patch Changes
+
+- 27c8380: fix oidc attempt
+
 ## 0.3.5
 
 ### Patch Changes
