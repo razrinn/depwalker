@@ -20,16 +20,17 @@ A TypeScript dependency analysis tool that tracks the impact of code changes. De
 
 ### Quick Start (Recommended)
 
-```bash
-npx depwalker
-```
-
-### Project Installation
+Run without installing using your preferred package runner:
 
 ```bash
-npm install --save-dev depwalker
-# or
-pnpm add -D depwalker
+# npm
+npx depwalker@latest
+
+# pnpm
+pnpm dlx depwalker@latest
+
+# bun
+bunx depwalker@latest
 ```
 
 ## 🚀 Usage
@@ -38,25 +39,28 @@ Run DepWalker in your TypeScript project with uncommitted changes:
 
 ```bash
 # Basic usage - outputs Markdown report
-npx depwalker
+npx depwalker@latest
 
 # Interactive HTML visualization (auto-opens browser)
-npx depwalker --format html
+npx depwalker@latest --format html
+
+# Using bunx instead of npx
+bunx depwalker@latest --format html
 
 # HTML with custom output path (auto-opens browser)
-npx depwalker --format html --output impact-report.html
+npx depwalker@latest --format html --output impact-report.html
 
 # HTML without auto-opening browser
-npx depwalker --format html --no-open
+npx depwalker@latest --format html --no-open
 
 # Limit analysis depth
-npx depwalker --depth 3
+npx depwalker@latest --depth 3
 
 # Custom tsconfig location
-npx depwalker --tsconfig ./custom-tsconfig.json
+npx depwalker@latest --tsconfig ./custom-tsconfig.json
 
 # Save to file
-npx depwalker --output impact-report.md
+npx depwalker@latest --output impact-report.md
 ```
 
 ### Example Output
