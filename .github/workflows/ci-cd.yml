@@ -116,10 +116,13 @@ jobs:
       - name: Update npm to latest
         run: npm install -g npm@latest
 
+      - name: Clean up npmrc
+        run: rm -f ~/.npmrc .npmrc "$NPM_CONFIG_USERCONFIG"
+
       - name: Publish to npm
-        run: |
-          unset NODE_AUTH_TOKEN
-          npm publish --access public --provenance
+        run: NODE_AUTH_TOKEN="" npm publish --provenance
+        env:
+          NPM_CONFIG_PROVENANCE: true 
 
       - name: Create Git Tag
         run: |
