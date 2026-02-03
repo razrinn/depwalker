@@ -552,6 +552,13 @@ header {
   height: 100%;
   position: relative;
   cursor: grab;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+.graph-container * {
+  user-select: none;
+  -webkit-user-select: none;
 }
 .graph-container:active,
 .graph-container.dragging {
@@ -1321,7 +1328,7 @@ function renderGraph(rootNode) {
     
     svg += '<g class="graph-node' + (n.isRoot ? ' graph-node-root' : '') + '" ' +
       'transform="translate(' + (n.x - nodeWidth/2) + ',' + (n.y - nodeHeight/2) + ')"' +
-      ' data-node-id="' + escapeHtml(n.id) + '"' +
+      ' data-node-id="' + n.id.replace(/"/g, '&quot;') + '"' +
       ' data-depth="' + n.depth + '">' +
       '<rect width="' + nodeWidth + '" height="' + nodeHeight + '" fill="var(--surface)" stroke="' + color + '"/>' +
       '<text x="' + (nodeWidth/2) + '" y="' + (nodeHeight/2 - 6) + '" text-anchor="middle" font-weight="500" font-size="10px">' + 
@@ -1473,6 +1480,54 @@ function setupGraphInteractions() {
   let dragStartX = 0;
   let dragStartY = 0;
   
+  // Smooth pan/zoom state
+  let smoothState = {
+    targetX: graphState.translateX,
+    targetY: graphState.translateY,
+    targetScale: graphState.scale,
+    currentX: graphState.translateX,
+    currentY: graphState.translateY,
+    currentScale: graphState.scale,
+    isAnimating: false,
+    lastPanTime: 0
+  };
+  
+  function lerp(start, end, t) {
+    return start + (end - start) * t;
+  }
+  
+  function updateSmoothTransform() {
+    const lerpFactor = 0.15;
+    const epsilon = 0.01;
+    
+    smoothState.currentX = lerp(smoothState.currentX, smoothState.targetX, lerpFactor);
+    smoothState.currentY = lerp(smoothState.currentY, smoothState.targetY, lerpFactor);
+    smoothState.currentScale = lerp(smoothState.currentScale, smoothState.targetScale, lerpFactor);
+    
+    const dx = Math.abs(smoothState.currentX - smoothState.targetX);
+    const dy = Math.abs(smoothState.currentY - smoothState.targetY);
+    const dScale = Math.abs(smoothState.currentScale - smoothState.targetScale);
+    
+    graphState.translateX = smoothState.currentX;
+    graphState.translateY = smoothState.currentY;
+    graphState.scale = smoothState.currentScale;
+    updateTransform();
+    
+    if (dx > epsilon || dy > epsilon || dScale > 0.001) {
+      smoothState.isAnimating = true;
+      requestAnimationFrame(updateSmoothTransform);
+    } else {
+      smoothState.isAnimating = false;
+    }
+  }
+  
+  function startAnimation() {
+    if (!smoothState.isAnimating) {
+      smoothState.isAnimating = true;
+      requestAnimationFrame(updateSmoothTransform);
+    }
+  }
+  
   container.addEventListener('click', function(e) {
     if (isDragging) return;
     
@@ -1494,23 +1549,46 @@ function setupGraphInteractions() {
     }
   });
   
+  // Wheel handler with smooth pan/zoom
   container.addEventListener('wheel', function(e) {
     e.preventDefault();
-    const zoomFactor = 0.2;
-    const delta = e.deltaY > 0 ? (1 - zoomFactor) : (1 + zoomFactor);
-    const newScale = Math.max(graphState.minScale, Math.min(graphState.maxScale, graphState.scale * delta));
-    
     const rect = container.getBoundingClientRect();
     const mouseX = e.clientX - rect.left;
     const mouseY = e.clientY - rect.top;
     
-    const worldX = (mouseX - graphState.translateX) / graphState.scale;
-    const worldY = (mouseY - graphState.translateY) / graphState.scale;
+    // Detect trackpad by checking deltaMode and typical trackpad patterns
+    const isTrackpad = e.deltaMode === 0 && Math.abs(e.deltaY) < 50 && Math.abs(e.deltaX) < 50;
     
-    graphState.translateX = mouseX - worldX * newScale;
-    graphState.translateY = mouseY - worldY * newScale;
-    graphState.scale = newScale;
+    if (e.ctrlKey || e.metaKey || (!isTrackpad && Math.abs(e.deltaY) > Math.abs(e.deltaX))) {
+      // Zoom behavior (Ctrl/Cmd + wheel, or mouse wheel without significant horizontal delta)
+      const zoomSensitivity = isTrackpad ? 0.008 : 0.001;
+      const delta = -e.deltaY * zoomSensitivity;
+      const newScale = Math.max(graphState.minScale, Math.min(graphState.maxScale, smoothState.targetScale * (1 + delta)));
+      
+      // Zoom towards mouse position
+      const worldX = (mouseX - smoothState.targetX) / smoothState.targetScale;
+      const worldY = (mouseY - smoothState.targetY) / smoothState.targetScale;
+      
+      smoothState.targetX = mouseX - worldX * newScale;
+      smoothState.targetY = mouseY - worldY * newScale;
+      smoothState.targetScale = newScale;
+    } else {
+      // Pan behavior (two-finger scroll on trackpad, or Shift + wheel)
+      const panSensitivity = isTrackpad ? 1.2 : 1.5;
+      const multiplier = smoothState.targetScale > 1 ? 1 : Math.max(0.5, smoothState.targetScale);
+      
+      smoothState.targetX -= e.deltaX * panSensitivity * multiplier;
+      smoothState.targetY -= e.deltaY * panSensitivity * multiplier;
+    }
     
+    smoothState.currentX = smoothState.targetX;
+    smoothState.currentY = smoothState.targetY;
+    smoothState.currentScale = smoothState.targetScale;
+    
+    // Sync back to graphState for other operations
+    graphState.translateX = smoothState.targetX;
+    graphState.translateY = smoothState.targetY;
+    graphState.scale = smoothState.targetScale;
     updateTransform();
   }, { passive: false });
   
@@ -1522,6 +1600,7 @@ function setupGraphInteractions() {
     graphState.isDragging = true;
     graphState.lastX = e.clientX;
     graphState.lastY = e.clientY;
+    smoothState.lastPanTime = Date.now();
     container.classList.add('dragging');
   });
   
@@ -1532,22 +1611,40 @@ function setupGraphInteractions() {
     if (moveX > 3 || moveY > 3) {
       isDragging = true;
     }
-    requestAnimationFrame(function() {
-      if (!graphState.isDragging) return;
-      const dx = e.clientX - graphState.lastX;
-      const dy = e.clientY - graphState.lastY;
-      graphState.translateX += dx;
-      graphState.translateY += dy;
-      graphState.lastX = e.clientX;
-      graphState.lastY = e.clientY;
-      updateTransform();
-    });
+    
+    const dx = e.clientX - graphState.lastX;
+    const dy = e.clientY - graphState.lastY;
+    
+    smoothState.targetX += dx;
+    smoothState.targetY += dy;
+    smoothState.currentX = smoothState.targetX;
+    smoothState.currentY = smoothState.targetY;
+    
+    graphState.translateX = smoothState.targetX;
+    graphState.translateY = smoothState.targetY;
+    graphState.lastX = e.clientX;
+    graphState.lastY = e.clientY;
+    smoothState.lastPanTime = Date.now();
+    
+    updateTransform();
   });
   
   window.addEventListener('mouseup', function() {
     graphState.isDragging = false;
     if (container) container.classList.remove('dragging');
   });
+  
+  // Sync smoothState when external functions modify graphState
+  const originalUpdateTransform = updateTransform;
+  window.updateTransform = function() {
+    smoothState.targetX = graphState.translateX;
+    smoothState.targetY = graphState.translateY;
+    smoothState.targetScale = graphState.scale;
+    smoothState.currentX = graphState.translateX;
+    smoothState.currentY = graphState.translateY;
+    smoothState.currentScale = graphState.scale;
+    originalUpdateTransform();
+  };
 }
 
 function showFunctionDetail(funcId) {
