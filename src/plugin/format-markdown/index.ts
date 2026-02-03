@@ -11,7 +11,7 @@ import {
   calculateImpactScore,
   type ImpactLevel,
 } from '../shared/utils.js';
-import { buildImpactTree } from '../shared/tree-builder.js';
+import { buildImpactTree, collectEntryPoints, groupEntryPointsByFile, type EntryPoint } from '../shared/tree-builder.js';
 
 /**
  * Markdown format plugin - generates markdown reports
@@ -112,6 +112,59 @@ export class MarkdownFormatPlugin implements FormatPlugin {
       lines.push('');
     }
 
+    // Entry Points Summary - What to test
+    lines.push('## 🎯 Test These Entry Points');
+    lines.push('');
+    lines.push('These are the **functions you should test** to verify your changes work correctly:');
+    lines.push('');
+
+    const allEntryPoints: Array<EntryPoint & { changedFunc: string; changedFuncName: string }> = [];
+    for (const [filePath, funcIds] of changedFunctions) {
+      for (const funcId of funcIds) {
+        const entryPoints = collectEntryPoints(funcId, callGraph, maxDepth);
+        for (const ep of entryPoints) {
+          allEntryPoints.push({
+            ...ep,
+            changedFunc: funcId,
+            changedFuncName: funcId.split(':')[1] || 'unknown',
+          });
+        }
+      }
+    }
+
+    // Deduplicate entry points by id, keep the shortest depth
+    const uniqueEntryPoints = new Map<string, EntryPoint>();
+    for (const ep of allEntryPoints) {
+      const existing = uniqueEntryPoints.get(ep.id);
+      if (!existing || ep.depth < existing.depth) {
+        uniqueEntryPoints.set(ep.id, ep);
+      }
+    }
+
+    const sortedEntryPoints = Array.from(uniqueEntryPoints.values())
+      .sort((a, b) => b.depth - a.depth);
+
+    if (sortedEntryPoints.length === 0) {
+      lines.push('*No entry points found - your changes may not affect any testable code paths.*');
+    } else {
+      // Group by file
+      const byFile = groupEntryPointsByFile(sortedEntryPoints);
+      
+      lines.push(`| Entry Point | File | Depth | Test Priority |`);
+      lines.push(`|-------------|------|-------|---------------|`);
+      
+      for (const [file, points] of byFile) {
+        for (const ep of points) {
+          const priority = ep.depth >= 3 ? '🔴 High' : ep.depth >= 1 ? '🟡 Medium' : '🟢 Low';
+          const depthLabel = ep.depth === 0 ? 'Direct' : `${ep.depth} level${ep.depth > 1 ? 's' : ''}`;
+          lines.push(`| **\`${ep.name}\`** | \`${truncatePath(file)}\` | ${depthLabel} | ${priority} |`);
+        }
+      }
+      lines.push('');
+      lines.push(`**Total: ${sortedEntryPoints.length} entry point${sortedEntryPoints.length > 1 ? 's' : ''} to test**`);
+    }
+    lines.push('');
+
     // Detailed impact analysis
     lines.push('## Detailed Impact');
     lines.push('');
@@ -149,9 +202,28 @@ export class MarkdownFormatPlugin implements FormatPlugin {
             lines.push('');
           }
 
-          // Impact tree
+          // Entry points for this function
+          const funcEntryPoints = collectEntryPoints(funcId, callGraph, maxDepth);
+          if (funcEntryPoints.length > 0) {
+            lines.push('**Test These Entry Points:**');
+            lines.push('');
+            const byFile = groupEntryPointsByFile(funcEntryPoints);
+            for (const [file, points] of byFile) {
+              lines.push(`- 📁 **\`${truncatePath(file)}\`**`);
+              for (const ep of points.slice(0, 5)) { // Limit to 5 per file
+                const depthLabel = ep.depth === 0 ? '(direct)' : `(${ep.depth} levels)`;
+                lines.push(`  - \`${ep.name}\` ${depthLabel}`);
+              }
+              if (points.length > 5) {
+                lines.push(`  - *...and ${points.length - 5} more*`);
+              }
+            }
+            lines.push('');
+          }
+
+          // Impact tree (callers)
           if (funcInfo && funcInfo.callers.length > 0) {
-            lines.push('**Impact Chain:**');
+            lines.push('**Full Call Chain:**');
             lines.push('');
             const treeLines = buildImpactTree(funcId, callGraph, maxDepth, 0, new Set(), '');
             lines.push(...treeLines.map(l => l || ''));

@@ -8,7 +8,7 @@ import {
   calculateStats,
   type ImpactedItem,
 } from '../shared/utils.js';
-import { buildTreeData, type TreeNode } from '../shared/tree-builder.js';
+import { buildTreeData, type TreeNode, collectEntryPoints, type EntryPoint } from '../shared/tree-builder.js';
 
 /**
  * HTML format plugin - generates interactive HTML reports
@@ -26,16 +26,33 @@ export class HtmlFormatPlugin implements FormatPlugin {
     const treeData = impactedItems.map(item => buildTreeData(item.funcId, callGraph, maxDepth));
     const stats = calculateStats(changedFiles, impactedItems);
 
+    // Collect all entry points for testing
+    const allEntryPoints: EntryPoint[] = [];
+    for (const item of impactedItems) {
+      const eps = collectEntryPoints(item.funcId, callGraph, maxDepth);
+      allEntryPoints.push(...eps);
+    }
+    // Deduplicate by id, keep shortest depth
+    const uniqueEntryPoints = new Map<string, EntryPoint>();
+    for (const ep of allEntryPoints) {
+      const existing = uniqueEntryPoints.get(ep.id);
+      if (!existing || ep.depth < existing.depth) {
+        uniqueEntryPoints.set(ep.id, ep);
+      }
+    }
+    const entryPointsData = Array.from(uniqueEntryPoints.values()).sort((a, b) => b.depth - a.depth);
+
     // Get version from package or use default
     const VERSION = '0.3.9';
 
-    return this.renderHtml(stats, impactedItems, treeData, VERSION);
+    return this.renderHtml(stats, impactedItems, treeData, entryPointsData, VERSION);
   }
 
   private renderHtml(
     stats: ReturnType<typeof calculateStats>,
     impactedItems: ImpactedItem[],
     treeData: (TreeNode | null)[],
+    entryPoints: EntryPoint[],
     version: string
   ): string {
     return `<!DOCTYPE html>
@@ -50,10 +67,11 @@ export class HtmlFormatPlugin implements FormatPlugin {
   <div class="container">
     ${this.renderHeader(version)}
     ${this.renderStats(stats)}
+    ${this.renderEntryPoints(entryPoints)}
     ${this.renderControls()}
-    ${this.renderMainLayout(impactedItems)}
+    ${this.renderMainLayout(impactedItems, entryPoints)}
   </div>
-  ${this.renderScripts(treeData, impactedItems)}
+  ${this.renderScripts(treeData, impactedItems, entryPoints)}
 </body>
 </html>`;
   }
@@ -546,6 +564,20 @@ header {
 .tree-children { margin-top: 2px; }
 .tree-children.collapsed { display: none; }
 
+/* Entry point highlighting in tree */
+.tree-content.entry-point {
+  background: rgba(0, 255, 65, 0.05);
+}
+.tree-content.entry-point .tree-label {
+  color: var(--accent);
+  font-weight: 500;
+}
+.entry-point-badge {
+  font-size: 11px;
+  margin: 0 6px;
+  cursor: help;
+}
+
 /* Graph Container */
 .graph-container {
   width: 100%;
@@ -775,6 +807,113 @@ header {
   font-size: 13px;
   color: var(--text-muted);
 }
+
+/* Entry Points Panel */
+.entry-points-panel {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+.entry-points-panel.empty {
+  opacity: 0.7;
+}
+.entry-points-header {
+  padding: 12px 16px;
+  background: var(--bg-elevated);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.entry-points-icon {
+  font-size: 18px;
+}
+.entry-points-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  flex: 1;
+}
+.entry-points-count {
+  font-size: 11px;
+  color: var(--accent);
+  background: rgba(0, 255, 65, 0.1);
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-weight: 500;
+}
+.entry-points-content {
+  padding: 12px 16px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.entry-points-empty {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-style: italic;
+}
+.entry-point-file {
+  margin-bottom: 10px;
+}
+.entry-point-file:last-child {
+  margin-bottom: 0;
+}
+.entry-point-file-path {
+  font-size: 11px;
+  color: var(--text-secondary);
+  margin-bottom: 6px;
+  font-family: inherit;
+}
+.entry-point-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.entry-point-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s;
+  border: 1px solid transparent;
+}
+.entry-point-tag:hover {
+  transform: translateY(-1px);
+}
+.entry-point-tag small {
+  font-size: 10px;
+  opacity: 0.7;
+}
+.entry-point-tag.priority-high {
+  background: rgba(255, 34, 34, 0.15);
+  color: var(--critical);
+  border-color: rgba(255, 34, 34, 0.3);
+}
+.entry-point-tag.priority-high:hover {
+  background: rgba(255, 34, 34, 0.25);
+}
+.entry-point-tag.priority-medium {
+  background: rgba(255, 170, 0, 0.15);
+  color: var(--medium);
+  border-color: rgba(255, 170, 0, 0.3);
+}
+.entry-point-tag.priority-medium:hover {
+  background: rgba(255, 170, 0, 0.25);
+}
+.entry-point-tag.priority-low {
+  background: rgba(0, 255, 65, 0.1);
+  color: var(--low);
+  border-color: rgba(0, 255, 65, 0.2);
+}
+.entry-point-tag.priority-low:hover {
+  background: rgba(0, 255, 65, 0.2);
+}
 </style>`;
   }
 
@@ -824,6 +963,55 @@ header {
 </div>`;
   }
 
+  private renderEntryPoints(entryPoints: EntryPoint[]): string {
+    if (entryPoints.length === 0) {
+      return `<div class="entry-points-panel empty">
+  <div class="entry-points-header">
+    <span class="entry-points-icon">🎯</span>
+    <span class="entry-points-title">Test These Entry Points</span>
+  </div>
+  <div class="entry-points-content">
+    <p class="entry-points-empty">No entry points found — your changes may not affect any testable code paths.</p>
+  </div>
+</div>`;
+    }
+
+    // Group by file
+    const byFile = new Map<string, EntryPoint[]>();
+    for (const ep of entryPoints) {
+      if (!byFile.has(ep.file)) {
+        byFile.set(ep.file, []);
+      }
+      byFile.get(ep.file)!.push(ep);
+    }
+
+    let itemsHtml = '';
+    for (const [file, points] of byFile) {
+      const fileEntryPoints = points.map(ep => {
+        const priorityClass = ep.depth >= 3 ? 'priority-high' : ep.depth >= 1 ? 'priority-medium' : 'priority-low';
+        const depthLabel = ep.depth === 0 ? 'direct' : `${ep.depth} lvl`;
+        return `<span class="entry-point-tag ${priorityClass}" title="${ep.name} (${file}:${ep.line})">${ep.name} <small>(${depthLabel})</small></span>`;
+      }).join('');
+      
+      itemsHtml += `
+        <div class="entry-point-file">
+          <div class="entry-point-file-path">${truncatePath(file)}</div>
+          <div class="entry-point-tags">${fileEntryPoints}</div>
+        </div>`;
+    }
+
+    return `<div class="entry-points-panel">
+  <div class="entry-points-header">
+    <span class="entry-points-icon">🎯</span>
+    <span class="entry-points-title">Test These Entry Points</span>
+    <span class="entry-points-count">${entryPoints.length} found</span>
+  </div>
+  <div class="entry-points-content">
+    ${itemsHtml}
+  </div>
+</div>`;
+  }
+
   private renderControls(): string {
     return `<div class="controls-bar">
   <div class="search-box">
@@ -839,7 +1027,7 @@ header {
 </div>`;
   }
 
-  private renderMainLayout(impactedItems: ImpactedItem[]): string {
+  private renderMainLayout(impactedItems: ImpactedItem[], entryPoints: EntryPoint[]): string {
     const functionItems = impactedItems.map(item => `
       <div class="function-item" data-func-id="${this.escapeHtml(item.funcId)}" data-impact="${item.impactLevel}">
         <div class="impact-indicator ${item.impactLevel}"></div>
@@ -896,11 +1084,14 @@ header {
 
   private renderScripts(
     treeData: (TreeNode | null)[],
-    impactedItems: ImpactedItem[]
+    impactedItems: ImpactedItem[],
+    entryPoints: EntryPoint[]
   ): string {
     return `<script>
 const treeData = ${JSON.stringify(treeData)};
 const functionData = ${JSON.stringify(impactedItems)};
+const entryPointsData = ${JSON.stringify(entryPoints)};
+const entryPointIds = new Set(entryPointsData.map(ep => ep.id));
 
 function escapeHtml(text) {
   const div = document.createElement('div');
@@ -918,10 +1109,15 @@ function renderTree(node, level) {
     ? node.file + ':' + node.line 
     : node.file.split('/').pop() + ':' + node.line;
   
+  // Check if this is an entry point (leaf node with no children in the callers tree)
+  const isEntryPoint = !hasChildren || entryPointIds.has(node.id);
+  const entryPointBadge = isEntryPoint ? '<span class="entry-point-badge" title="Test this entry point">🎯</span>' : '';
+  
   let html = '<div class="tree-node">';
-  html += '<div class="tree-content" style="padding-left: ' + (level * 16) + 'px">' +
+  html += '<div class="tree-content ' + (isEntryPoint ? 'entry-point' : '') + '" style="padding-left: ' + (level * 16) + 'px">' +
     '<span class="tree-toggle ' + toggleClass + '" onclick="toggleNode(this)"></span>' +
     '<span class="tree-label ' + (level === 0 ? 'root' : '') + '">' + escapeHtml(node.name) + '</span>' +
+    entryPointBadge +
     '<span class="tree-location">' + escapeHtml(location) + '</span>' +
   '</div>';
   
