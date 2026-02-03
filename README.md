@@ -12,7 +12,7 @@ A TypeScript dependency analysis tool that tracks the impact of code changes. De
 - **Pre-commit Review**: See the scope of impact before committing changes
 - **Test Planning**: Identify which parts need testing after modifications
 - **Refactoring Safety**: Verify dependencies when refactoring shared code
-- **Code Review**: Share impact analysis as Markdown with your team or AI assistants
+- **Code Review**: Share impact analysis as Markdown or interactive HTML with your team
 
 ## 📦 Installation
 
@@ -39,6 +39,15 @@ Run DepWalker in your TypeScript project with uncommitted changes:
 ```bash
 # Basic usage - outputs Markdown report
 npx depwalker
+
+# Interactive HTML visualization (auto-opens browser)
+npx depwalker --format html
+
+# HTML with custom output path (auto-opens browser)
+npx depwalker --format html --output impact-report.html
+
+# HTML without auto-opening browser
+npx depwalker --format html --no-open
 
 # Limit analysis depth
 npx depwalker --depth 3
@@ -94,11 +103,18 @@ npx depwalker --output impact-report.md
 
 ## 🔧 Options
 
-| Option                  | Description            | Default           |
-| ----------------------- | ---------------------- | ----------------- |
-| `-d, --depth <n>`       | Maximum analysis depth | No limit          |
-| `-t, --tsconfig <path>` | TypeScript config path | `./tsconfig.json` |
-| `-o, --output <file>`   | Save report to file    | Print to console  |
+| Option                   | Description                             | Default           |
+| ------------------------ | --------------------------------------- | ----------------- |
+| `-f, --format <format>`  | Output format: `markdown`, `html`       | `markdown`        |
+| `-d, --depth <n>`        | Maximum analysis depth                  | No limit          |
+| `-t, --tsconfig <path>`  | TypeScript config path                  | `./tsconfig.json` |
+| `-o, --output <file>`    | Save report to file                     | Auto-generated    |
+| `--no-open`              | Don't auto-open HTML report in browser  | (auto-opens)      |
+
+### Output Formats
+
+- **markdown** (default): Clean, structured report perfect for sharing with AI assistants or documentation
+- **html**: Interactive web visualization with Tree view (collapsible hierarchy) and Graph view (node diagram), plus search and filters - best for exploring complex dependency graphs. **Automatically opens in browser** (use `--no-open` to disable).
 
 ## 🤝 Contributing
 
