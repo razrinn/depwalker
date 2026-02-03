@@ -539,57 +539,59 @@ export function generateHtmlReport(
     }
     .container { max-width: 1600px; margin: 0 auto; padding: 20px; }
     
-    /* Header */
+    /* Header - Compact */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 16px 20px;
+      padding: 10px 16px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
-      margin-bottom: 20px;
+      border-radius: 6px;
+      margin-bottom: 12px;
     }
     .brand {
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
     }
     .brand-icon {
-      width: 36px;
-      height: 36px;
+      width: 28px;
+      height: 28px;
       background: var(--accent);
-      border-radius: 6px;
+      border-radius: 5px;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 18px;
+      font-size: 14px;
       color: #000;
       font-weight: bold;
     }
     .brand-text h1 {
-      font-size: 18px;
+      font-size: 15px;
       font-weight: 600;
-      letter-spacing: -0.5px;
+      letter-spacing: -0.3px;
       color: var(--text);
+      line-height: 1.2;
     }
     .brand-text .version {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--accent);
       font-weight: 500;
+      line-height: 1.2;
     }
     .subtitle {
       color: var(--text-secondary);
-      font-size: 12px;
+      font-size: 11px;
       text-align: right;
     }
     
-    /* Stats Grid */
+    /* Stats Grid - Compact */
     .stats-grid {
       display: grid;
       grid-template-columns: repeat(7, 1fr);
-      gap: 10px;
-      margin-bottom: 20px;
+      gap: 8px;
+      margin-bottom: 12px;
     }
     @media (max-width: 1400px) {
       .stats-grid { grid-template-columns: repeat(4, 1fr); }
@@ -603,8 +605,8 @@ export function generateHtmlReport(
     .stat-card {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
-      padding: 14px 16px;
+      border-radius: 5px;
+      padding: 10px 12px;
       transition: all 0.2s;
       position: relative;
       overflow: hidden;
@@ -626,9 +628,9 @@ export function generateHtmlReport(
     }
     .stat-card:hover::before { opacity: 1; }
     .stat-value {
-      font-size: 28px;
+      font-size: 22px;
       font-weight: 700;
-      margin-bottom: 2px;
+      margin-bottom: 1px;
       font-family: inherit;
     }
     .stat-label {
@@ -644,36 +646,36 @@ export function generateHtmlReport(
     .stat-none { color: var(--none); }
     .stat-primary { color: var(--accent); }
 
-    /* Controls Bar */
+    /* Controls Bar - Compact */
     .controls-bar {
       display: flex;
-      gap: 12px;
-      margin-bottom: 16px;
+      gap: 10px;
+      margin-bottom: 12px;
       align-items: center;
       flex-wrap: wrap;
     }
     .search-box {
       flex: 1;
-      min-width: 240px;
+      min-width: 200px;
       position: relative;
     }
     .search-box::before {
       content: '⌕';
       position: absolute;
-      left: 12px;
+      left: 10px;
       top: 50%;
       transform: translateY(-50%);
       color: var(--text-muted);
-      font-size: 16px;
+      font-size: 14px;
     }
     .search-box input {
       width: 100%;
-      padding: 10px 14px 10px 36px;
+      padding: 8px 12px 8px 30px;
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 6px;
+      border-radius: 5px;
       color: var(--text);
-      font-size: 13px;
+      font-size: 12px;
       font-family: inherit;
       transition: all 0.2s;
     }
@@ -716,35 +718,36 @@ export function generateHtmlReport(
       font-weight: 600;
     }
 
-    /* Main Layout */
+    /* Main Layout - Compact */
     .main-layout {
       display: grid;
-      grid-template-columns: 320px 1fr;
-      gap: 16px;
-      height: 1600px;
+      grid-template-columns: 280px 1fr;
+      gap: 12px;
+      height: 800px;
     }
     @media (max-width: 900px) {
       .main-layout { 
         grid-template-columns: 1fr;
-        height: 1200px;
+        height: auto;
+        min-height: 600px;
       }
-      .sidebar { max-height: 600px; }
+      .sidebar { max-height: 400px; }
     }
 
     /* Sidebar */
     .sidebar {
       background: var(--surface);
       border: 1px solid var(--border);
-      border-radius: 8px;
+      border-radius: 6px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
     }
     .sidebar-header {
-      padding: 14px 16px;
+      padding: 10px 12px;
       border-bottom: 1px solid var(--border);
       font-weight: 600;
-      font-size: 12px;
+      font-size: 11px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       color: var(--text-secondary);
@@ -770,13 +773,13 @@ export function generateHtmlReport(
       border-radius: 3px;
     }
     .function-item {
-      padding: 12px 14px;
+      padding: 8px 10px;
       border-bottom: 1px solid var(--border);
       cursor: pointer;
       transition: all 0.15s;
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
     }
     .function-item:hover { 
       background: var(--surface-hover); 
@@ -784,11 +787,11 @@ export function generateHtmlReport(
     .function-item.active { 
       background: var(--surface-active);
       border-left: 3px solid var(--accent);
-      padding-left: 11px;
+      padding-left: 7px;
     }
     .impact-indicator {
-      width: 4px;
-      height: 32px;
+      width: 3px;
+      height: 24px;
       border-radius: 2px;
       flex-shrink: 0;
     }
@@ -991,14 +994,7 @@ export function generateHtmlReport(
     .tree-children { margin-top: 2px; }
     .tree-children.collapsed { display: none; }
 
-    /* Graph View */
-    .graph-view {
-      position: relative;
-      overflow: hidden;
-      background: var(--bg);
-      flex: 1;
-      min-height: 1400px;
-    }
+    /* Graph Container */
     .graph-container {
       width: 100%;
       height: 100%;
@@ -1080,6 +1076,8 @@ export function generateHtmlReport(
       display: flex;
       align-items: center;
       gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
     }
     .header-btn {
       width: 28px;
@@ -1108,6 +1106,89 @@ export function generateHtmlReport(
       min-width: 36px;
       text-align: center;
       font-weight: 500;
+    }
+    /* Layer Panel - Vertical on the side */
+    .graph-layout {
+      display: flex;
+      flex: 1;
+      min-height: 0;
+    }
+    .layer-panel {
+      width: 70px;
+      background: var(--bg-elevated);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 12px 8px;
+      gap: 8px;
+    }
+    .layer-panel-title {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      text-align: center;
+      padding-bottom: 8px;
+      border-bottom: 1px solid var(--border);
+    }
+    .layer-panel-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    .layer-panel-actions {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+    .layer-btn {
+      padding: 6px 4px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      color: var(--text-secondary);
+      font-size: 11px;
+      cursor: pointer;
+      transition: all 0.15s;
+      font-family: inherit;
+      font-weight: 500;
+      text-align: center;
+    }
+    .layer-btn:hover {
+      border-color: var(--border-hover);
+      color: var(--text);
+      background: var(--surface-hover);
+    }
+    .layer-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+    .layer-btn.toggle-all-btn {
+      background: var(--surface-hover);
+      border-color: var(--border-hover);
+      font-size: 10px;
+      padding: 8px 4px;
+    }
+    .layer-btn.toggle-all-btn:hover {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #000;
+    }
+    .graph-view {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      background: var(--bg);
+      min-height: 1400px;
+    }
+    .zoom-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
     }
 
     /* Empty State */
@@ -1292,30 +1373,193 @@ export function generateHtmlReport(
       lastX: 0,
       lastY: 0,
       minScale: 0.05,
-      maxScale: 50
+      maxScale: 50,
+      visibleLayers: new Set() // Tracks which depth layers are visible
     };
 
-    function renderGraph(rootNode) {
-      if (!rootNode) return '';
+    // Get maximum depth in the tree
+    function getMaxDepth(node, visited) {
+      if (!node) return 0;
+      if (visited.has(node.id)) return 0;
+      visited.add(node.id);
       
-      const nodeWidth = 160;
-      const nodeHeight = 50;
+      if (!node.children || node.children.length === 0) return 0;
       
-      // Collect all nodes and links from the tree
+      let maxChildDepth = 0;
+      for (const child of node.children) {
+        maxChildDepth = Math.max(maxChildDepth, getMaxDepth(child, new Set(visited)));
+      }
+      return maxChildDepth + 1;
+    }
+
+    // Toggle layer visibility
+    window.toggleLayer = function(depth) {
+      if (graphState.visibleLayers.has(depth)) {
+        graphState.visibleLayers.delete(depth);
+      } else {
+        graphState.visibleLayers.add(depth);
+      }
+      updateLayerButtons();
+      updateGraphVisibility();
+    };
+
+    // Toggle between showing all layers and showing only root
+    window.toggleAllLayers = function() {
+      const maxDepth = parseInt(document.querySelector('.layer-btn[data-layer]:last-child')?.dataset.layer || '0');
+      const allVisible = graphState.visibleLayers.size > 1; // More than just root visible
+      
+      if (allVisible) {
+        // Hide all except root
+        graphState.visibleLayers.clear();
+        graphState.visibleLayers.add(0);
+      } else {
+        // Show all layers
+        for (let i = 0; i <= maxDepth; i++) {
+          graphState.visibleLayers.add(i);
+        }
+      }
+      updateLayerButtons();
+      updateAllToggleButton();
+      updateGraphVisibility();
+    };
+    
+    // Update the toggle all button text
+    function updateAllToggleButton() {
+      const btn = document.getElementById('toggleAllBtn');
+      if (btn) {
+        const allVisible = graphState.visibleLayers.size > 1;
+        btn.textContent = allVisible ? 'Hide All' : 'Show All';
+      }
+    }
+
+    // Update layer button states
+    function updateLayerButtons() {
+      document.querySelectorAll('.layer-btn').forEach(btn => {
+        const layer = parseInt(btn.dataset.layer);
+        if (graphState.visibleLayers.has(layer)) {
+          btn.classList.add('active');
+        } else {
+          btn.classList.remove('active');
+        }
+      });
+    }
+
+    // Update graph visibility based on layer filters
+    function updateGraphVisibility() {
+      const svg = document.getElementById('graphSvg');
+      if (!svg) return;
+      
+      // Update nodes
+      svg.querySelectorAll('.graph-node').forEach(node => {
+        const depth = parseInt(node.dataset.depth);
+        if (graphState.visibleLayers.has(depth)) {
+          node.style.display = '';
+          node.style.opacity = '1';
+        } else {
+          node.style.display = 'none';
+        }
+      });
+      
+      // Update links - only show if both source and target are visible
+      svg.querySelectorAll('.graph-link').forEach(link => {
+        const sourceId = link.dataset.source;
+        const targetId = link.dataset.target;
+        const sourceNode = svg.querySelector('.graph-node[data-node-id="' + sourceId + '"]');
+        const targetNode = svg.querySelector('.graph-node[data-node-id="' + targetId + '"]');
+        
+        if (sourceNode && targetNode) {
+          const sourceDepth = parseInt(sourceNode.dataset.depth);
+          const targetDepth = parseInt(targetNode.dataset.depth);
+          
+          if (graphState.visibleLayers.has(sourceDepth) && graphState.visibleLayers.has(targetDepth)) {
+            link.style.display = '';
+            link.style.opacity = '1';
+          } else {
+            link.style.display = 'none';
+          }
+        }
+      });
+      
+      // Re-apply highlight if a node is selected
+      if (selectedNodeId) {
+        highlightNodeConnections(selectedNodeId);
+      }
+    }
+
+    // Count total leaves in a subtree (for sector allocation)
+    function countLeaves(node, visited) {
+      if (!node) return 0;
+      if (visited.has(node.id)) return 0;
+      visited.add(node.id);
+      
+      if (!node.children || node.children.length === 0) {
+        return 1;
+      }
+      
+      let leaves = 0;
+      for (const child of node.children) {
+        leaves += countLeaves(child, new Set(visited));
+      }
+      return Math.max(leaves, 1);
+    }
+
+    // Build tree structure with angular sector assignments
+    function buildRadialLayout(rootNode) {
+      if (!rootNode) return { nodes: [], links: [] };
+      
       const nodes = [];
       const links = [];
       const nodeMap = new Map();
       const visited = new Set();
       
-      // Flatten tree and collect nodes
-      function collectNodes(node, depth, parentId) {
-        if (!node || visited.has(node.id)) {
-          if (node && parentId) {
+      // First pass: count leaves for each node to determine sector size
+      const leafCounts = new Map();
+      
+      function calcLeafCounts(node) {
+        if (!node || leafCounts.has(node.id)) return leafCounts.get(node.id) || 0;
+        
+        let count = 0;
+        const hasChildren = node.children && node.children.length > 0;
+        
+        if (!hasChildren) {
+          count = 1;
+        } else {
+          for (const child of node.children) {
+            count += calcLeafCounts(child);
+          }
+        }
+        
+        leafCounts.set(node.id, Math.max(count, 1));
+        return Math.max(count, 1);
+      }
+      
+      calcLeafCounts(rootNode);
+      
+      // Second pass: assign positions based on radial layout
+      const rootLeaves = leafCounts.get(rootNode.id) || 1;
+      
+      function assignPositions(node, depth, startAngle, endAngle, parentId) {
+        if (!node) return;
+        if (visited.has(node.id)) {
+          // Circular reference - add link but don't recurse
+          if (parentId) {
             links.push({ source: parentId, target: node.id, circular: true });
           }
           return;
         }
         visited.add(node.id);
+        
+        // Calculate radius based on depth - exponential spacing for mind-map effect
+        const levelSpacing = 140;  // Distance between depth levels
+        const radius = depth === 0 ? 0 : 60 + depth * levelSpacing;
+        
+        // Calculate angle - middle of sector
+        const midAngle = (startAngle + endAngle) / 2;
+        
+        // Convert polar to cartesian
+        // Flip Y so tree grows downward (standard mind map orientation)
+        const x = Math.cos(midAngle) * radius;
+        const y = Math.sin(midAngle) * radius;
         
         const n = {
           id: node.id,
@@ -1323,8 +1567,15 @@ export function generateHtmlReport(
           file: node.file.split('/').pop(),
           depth: depth,
           isRoot: depth === 0,
-          x: 0, y: 0,
-          vx: 0, vy: 0
+          x: x,
+          y: y,
+          targetX: x,
+          targetY: y,
+          angle: midAngle,
+          radius: radius,
+          sectorStart: startAngle,
+          sectorEnd: endAngle,
+          parentId: parentId
         };
         nodes.push(n);
         nodeMap.set(node.id, n);
@@ -1333,80 +1584,58 @@ export function generateHtmlReport(
           links.push({ source: parentId, target: node.id, circular: false });
         }
         
-        if (node.children) {
-          node.children.forEach(child => collectNodes(child, depth + 1, node.id));
+        // Assign sectors to children based on their leaf counts
+        if (node.children && node.children.length > 0) {
+          const totalLeaves = leafCounts.get(node.id) || 1;
+          const sectorSize = endAngle - startAngle;
+          let currentAngle = startAngle;
+          
+          // Sort children by leaf count (largest first) for better distribution
+          const sortedChildren = [...node.children].sort((a, b) => {
+            return (leafCounts.get(b.id) || 1) - (leafCounts.get(a.id) || 1);
+          });
+          
+          for (const child of sortedChildren) {
+            const childLeaves = leafCounts.get(child.id) || 1;
+            const childSectorSize = (childLeaves / totalLeaves) * sectorSize;
+            
+            assignPositions(child, depth + 1, currentAngle, currentAngle + childSectorSize, node.id);
+            currentAngle += childSectorSize;
+          }
         }
       }
       
-      collectNodes(rootNode, 0, null);
+      // Start with full circle for root
+      assignPositions(rootNode, 0, 0, 2 * Math.PI, null);
       
-      // Force-directed layout simulation - compact clustering
-      const centerX = 0;
-      const centerY = 0;
-      const repulsionStrength = 800;     // Reduced: less push between nodes
-      const springLength = 80;           // Reduced: nodes closer together
-      const springStrength = 0.15;       // Increased: stronger pull on links
-      const centerStrength = 0.02;       // Increased: stronger pull to center
-      const maxRepulsionDist = 300;      // Limit repulsion range for tighter clusters
+      return { nodes, links, nodeMap };
+    }
+
+    function renderGraph(rootNode) {
+      if (!rootNode) return '';
       
-      // Initialize positions in a tighter circle around center
-      const angleStep = (2 * Math.PI) / Math.max(nodes.length, 1);
-      nodes.forEach((n, i) => {
-        const angle = angleStep * i;
-        // Tighter initial radius based on depth - root in center, children radiate outward
-        const radius = 60 + n.depth * 50;
-        n.x = Math.cos(angle) * radius;
-        n.y = Math.sin(angle) * radius;
-      });
+      const nodeWidth = 160;
+      const nodeHeight = 50;
       
-      // Run simulation iterations
-      for (let iteration = 0; iteration < 300; iteration++) {
-        // Repulsion (nodes push each other away) - limited range for tighter clusters
-        for (let i = 0; i < nodes.length; i++) {
-          for (let j = i + 1; j < nodes.length; j++) {
-            const a = nodes[i];
-            const b = nodes[j];
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-            const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-            
-            // Only apply repulsion within limited range for tighter clustering
-            if (dist < maxRepulsionDist) {
-              const force = repulsionStrength / (dist * dist + 100); // +100 softens close-range repulsion
-              const fx = (dx / dist) * force;
-              const fy = (dy / dist) * force;
-              
-              a.vx -= fx;
-              a.vy -= fy;
-              b.vx += fx;
-              b.vy += fy;
-            }
-          }
-        }
-        
-        // Spring attraction (links pull nodes together)
-        links.forEach(link => {
-          if (link.circular) return;
-          const source = nodeMap.get(link.source);
-          const target = nodeMap.get(link.target);
-          if (!source || !target) return;
-          
-          const dx = target.x - source.x;
-          const dy = target.y - source.y;
-          const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-          const force = (dist - springLength) * springStrength;
-          const fx = (dx / dist) * force;
-          const fy = (dy / dist) * force;
-          
-          source.vx += fx;
-          source.vy += fy;
-          target.vx -= fx;
-          target.vy -= fy;
-        });
-        
-        // Collision detection - prevent node overlap
-        const minDistX = nodeWidth + 10;  // Minimum horizontal separation
-        const minDistY = nodeHeight + 10; // Minimum vertical separation
+      // Build radial/mind-map layout
+      const { nodes, links, nodeMap } = buildRadialLayout(rootNode);
+      
+      if (nodes.length === 0) return '';
+      
+      // Initialize all layers as visible
+      const maxNodeDepth = Math.max(...nodes.map(n => n.depth));
+      graphState.visibleLayers.clear();
+      for (let i = 0; i <= maxNodeDepth; i++) {
+        graphState.visibleLayers.add(i);
+      }
+      
+      // Apply collision resolution to prevent overlap while keeping radial structure
+      const minDistX = nodeWidth + 20;
+      const minDistY = nodeHeight + 20;
+      
+      // Iteratively resolve collisions
+      for (let iteration = 0; iteration < 200; iteration++) {
+        let moved = false;
         
         for (let i = 0; i < nodes.length; i++) {
           for (let j = i + 1; j < nodes.length; j++) {
@@ -1418,45 +1647,76 @@ export function generateHtmlReport(
             const absDx = Math.abs(dx);
             const absDy = Math.abs(dy);
             
-            // Check if rectangles overlap
             const overlapX = minDistX - absDx;
             const overlapY = minDistY - absDy;
             
             if (overlapX > 0 && overlapY > 0) {
-              // Nodes are overlapping - push them apart
-              // Push more in the direction of least overlap
-              if (overlapX < overlapY) {
-                // Push horizontally
-                const pushX = (overlapX / 2 + 2) * (dx > 0 ? -1 : 1);
-                a.vx += pushX;
-                b.vx -= pushX;
+              moved = true;
+              
+              // Calculate push direction - prioritize pushing perpendicular to radius
+              // This maintains the radial structure better
+              const aAngle = Math.atan2(a.y, a.x);
+              const bAngle = Math.atan2(b.y, b.x);
+              const angleDiff = Math.abs(aAngle - bAngle);
+              
+              // If nodes are at similar angles (same "spoke"), push radially
+              // If nodes are at different angles, push tangentially
+              const similarAngle = angleDiff < 0.3 || angleDiff > Math.PI * 2 - 0.3;
+              
+              let pushX, pushY;
+              const pushAmount = 3 * (1 - iteration / 250); // Decaying push strength
+              
+              if (similarAngle) {
+                // Push radially (away from center)
+                const aDist = Math.sqrt(a.x * a.x + a.y * a.y) || 1;
+                const bDist = Math.sqrt(b.x * b.x + b.y * b.y) || 1;
+                
+                if (a.depth !== b.depth) {
+                  // Different depths - push the outer one further out
+                  const outer = a.depth > b.depth ? a : b;
+                  const inner = a.depth > b.depth ? b : a;
+                  const dist = Math.sqrt(outer.x * outer.x + outer.y * outer.y) || 1;
+                  pushX = (outer.x / dist) * pushAmount;
+                  pushY = (outer.y / dist) * pushAmount;
+                  outer.x += pushX;
+                  outer.y += pushY;
+                } else {
+                  // Same depth - push apart tangentially
+                  const tangentialX = -Math.sin(aAngle);
+                  const tangentialY = Math.cos(aAngle);
+                  pushX = tangentialX * pushAmount * 0.5;
+                  pushY = tangentialY * pushAmount * 0.5;
+                  
+                  a.x -= pushX;
+                  a.y -= pushY;
+                  b.x += pushX;
+                  b.y += pushY;
+                }
               } else {
-                // Push vertically
-                const pushY = (overlapY / 2 + 2) * (dy > 0 ? -1 : 1);
-                a.vy += pushY;
-                b.vy -= pushY;
+                // Push based on overlap direction
+                if (overlapX < overlapY) {
+                  pushX = (overlapX / 2 + 2) * (dx > 0 ? -1 : 1) * 0.5;
+                  a.x += pushX;
+                  b.x -= pushX;
+                } else {
+                  pushY = (overlapY / 2 + 2) * (dy > 0 ? -1 : 1) * 0.5;
+                  a.y += pushY;
+                  b.y -= pushY;
+                }
               }
             }
           }
         }
         
-        // Pull to center (gentle gravity)
+        // Pull nodes toward their target positions (radial constraint)
+        const pullStrength = 0.05 * (1 - iteration / 300);
         nodes.forEach(n => {
-          n.vx += (centerX - n.x) * centerStrength;
-          n.vy += (centerY - n.y) * centerStrength;
+          if (n.isRoot) return;
+          n.x += (n.targetX - n.x) * pullStrength;
+          n.y += (n.targetY - n.y) * pullStrength;
         });
         
-        // Apply velocity with damping and clamp
-        nodes.forEach(n => {
-          n.vx *= 0.9;
-          n.vy *= 0.9;
-          // Clamp velocity to prevent runaway
-          const maxVel = 50;
-          n.vx = Math.max(-maxVel, Math.min(maxVel, n.vx));
-          n.vy = Math.max(-maxVel, Math.min(maxVel, n.vy));
-          n.x += n.vx;
-          n.y += n.vy;
-        });
+        if (!moved && iteration > 50) break;
       }
       
       // Calculate bounds
@@ -1469,9 +1729,8 @@ export function generateHtmlReport(
       let boundsHeight = maxY - minY;
       
       // Sanity check - ensure reasonable bounds
-      const maxBounds = 5000;
+      const maxBounds = 8000;
       if (boundsWidth > maxBounds || boundsHeight > maxBounds || !isFinite(boundsWidth) || !isFinite(boundsHeight)) {
-        // Reset to default if bounds are extreme
         boundsWidth = Math.min(boundsWidth, maxBounds);
         boundsHeight = Math.min(boundsHeight, maxBounds);
       }
@@ -1493,120 +1752,6 @@ export function generateHtmlReport(
           '</marker>' +
         '</defs>' +
         '<g id="graphTransformGroup">'
-      
-      // Count dependents for each node to group high-dependency nodes together
-      const dependentsCount = new Map();
-      nodes.forEach(n => dependentsCount.set(n.id, 0));
-      links.forEach(link => {
-        if (!link.circular) {
-          const count = dependentsCount.get(link.target) || 0;
-          dependentsCount.set(link.target, count + 1);
-        }
-      });
-      
-      // Mark high-dependency nodes (>2 dependents)
-      const highDepThreshold = 2;
-      nodes.forEach(n => {
-        n.dependentsCount = dependentsCount.get(n.id) || 0;
-        n.isHighDependency = n.dependentsCount > highDepThreshold;
-      });
-      
-      // Find connected components/groups for clustering
-      const nodeGroups = new Map();
-      let groupId = 0;
-      
-      function assignGroup(nodeId, gid) {
-        if (nodeGroups.has(nodeId)) return;
-        nodeGroups.set(nodeId, gid);
-        const connected = links.filter(l => l.source === nodeId || l.target === nodeId);
-        connected.forEach(l => {
-          const other = l.source === nodeId ? l.target : l.source;
-          assignGroup(other, gid);
-        });
-      }
-      
-      nodes.forEach(n => {
-        if (!nodeGroups.has(n.id)) {
-          assignGroup(n.id, groupId++);
-        }
-      });
-      
-      // Add group center attraction to layout
-      const groupCenters = new Map();
-      for (let g = 0; g < groupId; g++) {
-        const groupNodes = nodes.filter(n => nodeGroups.get(n.id) === g);
-        const highDepNodes = groupNodes.filter(n => n.isHighDependency);
-        
-        if (highDepNodes.length > 0) {
-          // Position high-dependency group nodes in a cluster
-          const angle = (g / Math.max(groupId, 1)) * 2 * Math.PI;
-          const radius = 120;
-          groupCenters.set(g, {
-            x: Math.cos(angle) * radius,
-            y: Math.sin(angle) * radius,
-            hasHighDep: true
-          });
-        }
-      }
-      
-      // Re-run layout with group attraction
-      const minDistX2 = nodeWidth + 10;
-      const minDistY2 = nodeHeight + 10;
-      
-      for (let iteration = 0; iteration < 150; iteration++) {
-        // Group center attraction for high-dependency clusters
-        nodes.forEach(n => {
-          const gid = nodeGroups.get(n.id);
-          const center = groupCenters.get(gid);
-          if (center && (n.isHighDependency || n.depth <= 1)) {
-            const strength = n.isHighDependency ? 0.08 : 0.03;
-            n.vx += (center.x - n.x) * strength;
-            n.vy += (center.y - n.y) * strength;
-          }
-        });
-        
-        // Collision detection - prevent node overlap (limited push)
-        for (let i = 0; i < nodes.length; i++) {
-          for (let j = i + 1; j < nodes.length; j++) {
-            const a = nodes[i];
-            const b = nodes[j];
-            
-            const dx = b.x - a.x;
-            const dy = b.y - a.y;
-            const absDx = Math.abs(dx);
-            const absDy = Math.abs(dy);
-            
-            const overlapX = minDistX2 - absDx;
-            const overlapY = minDistY2 - absDy;
-            
-            if (overlapX > 0 && overlapY > 0) {
-              // Limit push to prevent extreme separation
-              const maxPush = 20;
-              if (overlapX < overlapY) {
-                const pushX = Math.min(overlapX / 2 + 1, maxPush) * (dx > 0 ? -1 : 1);
-                a.vx += pushX;
-                b.vx -= pushX;
-              } else {
-                const pushY = Math.min(overlapY / 2 + 1, maxPush) * (dy > 0 ? -1 : 1);
-                a.vy += pushY;
-                b.vy -= pushY;
-              }
-            }
-          }
-        }
-        
-        // Apply velocity with damping and clamp
-        nodes.forEach(n => {
-          n.vx *= 0.8;
-          n.vy *= 0.8;
-          // Clamp velocity to prevent runaway
-          const maxVel = 50;
-          n.vx = Math.max(-maxVel, Math.min(maxVel, n.vx));
-          n.vy = Math.max(-maxVel, Math.min(maxVel, n.vy));
-          n.x += n.vx;
-          n.y += n.vy;
-        });
-      }
       
       // Build link ID mapping for highlighting
       const linkIds = new Map();
@@ -1652,7 +1797,8 @@ export function generateHtmlReport(
         
         svg += '<g class="graph-node' + (n.isRoot ? ' graph-node-root' : '') + '" ' +
           'transform="translate(' + (n.x - nodeWidth/2) + ',' + (n.y - nodeHeight/2) + ')"' +
-          ' data-node-id="' + escapeHtml(n.id) + '">' +
+          ' data-node-id="' + escapeHtml(n.id) + '"' +
+          ' data-depth="' + n.depth + '">' +
           '<rect width="' + nodeWidth + '" height="' + nodeHeight + '" fill="var(--surface)" stroke="' + color + '"/>' +
           highDepIndicator +
           '<text x="' + (nodeWidth/2) + '" y="' + (nodeHeight/2 - 6) + '" text-anchor="middle" font-weight="500" font-size="10px">' + 
@@ -1930,18 +2076,30 @@ export function generateHtmlReport(
         '<span class="impact-badge ' + func.impactLevel + '">' + func.impactLevel + '</span>' +
       '</div>';
       
-      // Graph header with controls
+      // Calculate max depth for layer controls
+      const maxDepth = treeNode ? getMaxDepth(treeNode, new Set()) : 0;
+      
+      // Build layer toggle buttons
+      let layerButtonsHtml = '';
+      for (let i = 0; i <= maxDepth; i++) {
+        const label = i === 0 ? 'Root' : 'L' + i;
+        layerButtonsHtml += '<button class="layer-btn active" data-layer="' + i + '" onclick="toggleLayer(' + i + ')">' + label + '</button>';
+      }
+      
+      // Graph header with controls (zoom only)
       let graphHeaderHtml = '<div class="content-header">' +
         '<div class="content-title-group">' +
           '<div class="content-title">' + escapeHtml(func.name) + '</div>' +
           '<div class="content-subtitle">' + escapeHtml(func.file) + ':' + func.line + ' · Score: ' + func.score + ' (' + func.dependents + ' deps, depth ' + func.depth + ')</div>' +
         '</div>' +
         '<div class="header-controls">' +
-          '<button class="header-btn" onclick="zoomOut()" title="Zoom out">−</button>' +
-          '<span class="zoom-level" id="headerZoomLevel">100%</span>' +
-          '<button class="header-btn" onclick="zoomIn()" title="Zoom in">+</button>' +
-          '<button class="header-btn" onclick="fitToScreen()" title="Fit to screen">⟲</button>' +
-          '<button class="header-btn" onclick="resetZoom()" title="Reset">⌂</button>' +
+          '<div class="zoom-controls">' +
+            '<button class="header-btn" onclick="zoomOut()" title="Zoom out">−</button>' +
+            '<span class="zoom-level" id="headerZoomLevel">100%</span>' +
+            '<button class="header-btn" onclick="zoomIn()" title="Zoom in">+</button>' +
+            '<button class="header-btn" onclick="fitToScreen()" title="Fit to screen">⟲</button>' +
+            '<button class="header-btn" onclick="resetZoom()" title="Reset">⌂</button>' +
+          '</div>' +
         '</div>' +
       '</div>';
       
@@ -1958,8 +2116,19 @@ export function generateHtmlReport(
       }
       treeHtml += '</div>';
       
-      // Graph view
-      let graphHtml = '<div class="graph-view">';
+      // Graph view with vertical layer panel
+      let layerPanelHtml = '<div class="layer-panel">' +
+        '<div class="layer-panel-actions">' +
+          '<button id="toggleAllBtn" class="layer-btn toggle-all-btn" onclick="toggleAllLayers()">Hide All</button>' +
+        '</div>' +
+        '<div class="layer-panel-buttons">' +
+          layerButtonsHtml +
+        '</div>' +
+      '</div>';
+      
+      let graphHtml = '<div class="graph-layout">' +
+        layerPanelHtml +
+        '<div class="graph-view">';
       if (treeNode && treeNode.children && treeNode.children.length > 0) {
         graphHtml += renderGraph(treeNode);
       } else {
@@ -1968,7 +2137,7 @@ export function generateHtmlReport(
           '<p>No dependencies to visualize</p>' +
         '</div>';
       }
-      graphHtml += '</div>';
+      graphHtml += '</div></div>';
       
       document.getElementById('treeContainer').innerHTML = treeHeaderHtml + treeHtml;
       document.getElementById('graphContainer').innerHTML = graphHeaderHtml + graphHtml;
@@ -1976,6 +2145,7 @@ export function generateHtmlReport(
       // Setup graph interactions and auto-fit after DOM update
       requestAnimationFrame(function() {
         setupGraphInteractions();
+        updateAllToggleButton();
         // Auto-fit the graph to screen on initial load
         requestAnimationFrame(fitToScreen);
       });
