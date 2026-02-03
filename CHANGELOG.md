@@ -4,6 +4,19 @@
 
 ### Minor Changes
 
+- 82e7838: Add support for lazy import impact analysis
+
+  - Detect `lazy(() => import('...'))` and `React.lazy()` patterns
+  - Track lazy-loaded module dependencies
+  - Show impacted callers when lazy-loaded components change
+  - Display lazy imports in markdown and HTML reports
+
+- 596b950: update to plugin based
+
+## 0.4.0
+
+### Minor Changes
+
 - Plugin-based architecture refactor for output formats
 
   ### New Features
