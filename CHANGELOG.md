@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.3.8
+
+### Patch Changes
+
+- 4ac428d: attempt
+
 ## 0.3.7
 
 ### Patch Changes
