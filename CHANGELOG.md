@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.3.10
+
+### Patch Changes
+
+- 1131597: improvement on graph visualization
+
 ## 0.3.9
 
 ### Patch Changes
