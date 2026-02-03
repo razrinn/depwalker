@@ -116,11 +116,11 @@ jobs:
       - name: Update npm to latest
         run: npm install -g npm@latest
 
+      - name: Unset NODE_AUTH_TOKEN
+        run: unset NODE_AUTH_TOKEN
+
       - name: Publish to npm
-        run: |
-          echo $NODE_AUTH_TOKEN
-          echo $NPM_TOKEN
-          npm publish --access public --provenance
+        run: npm publish --access public --provenance
 
       - name: Create Git Tag
         run: |
