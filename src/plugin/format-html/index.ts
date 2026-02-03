@@ -1588,6 +1588,18 @@ function showFunctionDetail(funcId) {
     '</div>' +
   '</div>';
   
+  // Lazy imports section
+  let lazyImportsHtml = '';
+  if (func.lazyImports && func.lazyImports.length > 0) {
+    lazyImportsHtml += '<div style="padding: 12px 20px; border-bottom: 1px solid var(--border); background: var(--bg-elevated);">';
+    lazyImportsHtml += '<p style="font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">Lazy Imports</p>';
+    lazyImportsHtml += '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
+    for (const li of func.lazyImports) {
+      lazyImportsHtml += '<span style="padding: 4px 10px; background: var(--surface); border: 1px solid var(--border); border-radius: 4px; font-size: 12px; color: var(--text); font-family: inherit;">📦 ' + escapeHtml(li.moduleSpecifier) + ' <span style="color: var(--text-muted);">(L' + li.line + ')</span></span>';
+    }
+    lazyImportsHtml += '</div></div>';
+  }
+  
   let treeHtml = '<div class="tree-view">';
   if (treeNode && treeNode.children && treeNode.children.length > 0) {
     treeHtml += '<p style="margin-bottom: 16px; color: var(--text-muted); font-size: 12px;">Functions that depend on this change:</p>';
@@ -1622,7 +1634,7 @@ function showFunctionDetail(funcId) {
   }
   graphHtml += '</div></div>';
   
-  document.getElementById('treeContainer').innerHTML = treeHeaderHtml + treeHtml;
+  document.getElementById('treeContainer').innerHTML = treeHeaderHtml + lazyImportsHtml + treeHtml;
   document.getElementById('graphContainer').innerHTML = graphHeaderHtml + graphHtml;
   
   requestAnimationFrame(function() {

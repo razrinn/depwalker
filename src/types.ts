@@ -5,9 +5,15 @@ export interface CallSite {
   line: number;
 }
 
+export interface LazyImport {
+  moduleSpecifier: string;
+  line: number;
+}
+
 export interface FunctionInfo {
   callers: CallSite[];
   definition: { startLine: number; endLine: number };
+  lazyImports?: LazyImport[];
 }
 
 export type CallGraph = Map<string, FunctionInfo>;

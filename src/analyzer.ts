@@ -1,6 +1,6 @@
 import path from 'path';
 import ts from 'typescript';
-import type { CallGraph, CallSite, FunctionInfo } from './types.js';
+import type { CallGraph, CallSite, FunctionInfo, LazyImport } from './types.js';
 
 /**
  * Create TypeScript program from tsconfig
@@ -24,6 +24,64 @@ export function createTsProgram(tsConfigPath = './tsconfig.json'): ts.Program {
   }
 
   return ts.createProgram(parsedConfig.fileNames, parsedConfig.options);
+}
+
+/**
+ * Extract lazy import module specifier from a lazy() call expression
+ * Handles patterns like:
+ * - lazy(() => import('./module'))
+ * - lazy(() => import('@/features/widgets/broker-flow'))
+ * - React.lazy(() => import('./module'))
+ */
+function extractLazyImport(callExpr: ts.CallExpression): string | null {
+  // Check if it's a lazy() or React.lazy() call
+  let isLazyCall = false;
+  
+  if (ts.isIdentifier(callExpr.expression) && callExpr.expression.text === 'lazy') {
+    isLazyCall = true;
+  } else if (ts.isPropertyAccessExpression(callExpr.expression)) {
+    const exprText = callExpr.expression.getText();
+    if (exprText === 'React.lazy' || exprText.endsWith('.lazy')) {
+      isLazyCall = true;
+    }
+  }
+  
+  if (!isLazyCall || callExpr.arguments.length === 0) {
+    return null;
+  }
+  
+  const arg = callExpr.arguments[0];
+  
+  if (!arg) {
+    return null;
+  }
+  
+  // Check for arrow function: () => import(...)
+  if (ts.isArrowFunction(arg) && arg.body) {
+    let importCall: ts.CallExpression | undefined;
+    
+    // Direct: () => import('...')
+    if (ts.isCallExpression(arg.body)) {
+      importCall = arg.body;
+    }
+    // Block: () => { return import('...'); }
+    else if (ts.isBlock(arg.body)) {
+      // Look for return statement with import()
+      const returnStmt = arg.body.statements.find(ts.isReturnStatement);
+      if (returnStmt?.expression && ts.isCallExpression(returnStmt.expression)) {
+        importCall = returnStmt.expression;
+      }
+    }
+    
+    if (importCall && importCall.expression.kind === ts.SyntaxKind.ImportKeyword) {
+      const moduleSpecifier = importCall.arguments[0];
+      if (moduleSpecifier && ts.isStringLiteral(moduleSpecifier)) {
+        return moduleSpecifier.text;
+      }
+    }
+  }
+  
+  return null;
 }
 
 /**
@@ -68,6 +126,15 @@ export function getFunctionId(node: ts.Node, sourceFile: ts.SourceFile): string 
 export function buildCallGraph(program: ts.Program): CallGraph {
   const callGraph: CallGraph = new Map();
   const typeChecker = program.getTypeChecker();
+  
+  // Track lazy imports for second-pass resolution
+  interface LazyImportRef {
+    callerId: string;
+    moduleSpecifier: string;
+    line: number;
+    sourceFile: ts.SourceFile;
+  }
+  const lazyImportRefs: LazyImportRef[] = [];
 
   function visit(
     node: ts.Node,
@@ -138,6 +205,36 @@ export function buildCallGraph(program: ts.Program): CallGraph {
       }
     }
 
+    // Handle lazy imports: lazy(() => import('./module'))
+    if (ts.isVariableDeclaration(node) && node.initializer && ts.isCallExpression(node.initializer)) {
+      const callExpr = node.initializer;
+      const modulePath = extractLazyImport(callExpr);
+      
+      if (modulePath) {
+        const lazyComponentId = getFunctionId(node, sourceFile);
+        if (lazyComponentId && callGraph.has(lazyComponentId)) {
+          const funcInfo = callGraph.get(lazyComponentId)!;
+          const { line } = sourceFile.getLineAndCharacterOfPosition(callExpr.getStart());
+          
+          if (!funcInfo.lazyImports) {
+            funcInfo.lazyImports = [];
+          }
+          funcInfo.lazyImports.push({
+            moduleSpecifier: modulePath,
+            line: line + 1,
+          });
+          
+          // Track for second-pass resolution
+          lazyImportRefs.push({
+            callerId: lazyComponentId,
+            moduleSpecifier: modulePath,
+            line: line + 1,
+            sourceFile,
+          });
+        }
+      }
+    }
+
     // Record function calls and JSX usage
     if (currentFunctionId) {
       let calleeNode: ts.Node | undefined;
@@ -162,6 +259,56 @@ export function buildCallGraph(program: ts.Program): CallGraph {
   for (const sourceFile of program.getSourceFiles()) {
     if (!sourceFile.isDeclarationFile) {
       visit(sourceFile, sourceFile, null);
+    }
+  }
+
+  // Second pass: resolve lazy imports and create caller relationships
+  const compilerOptions = program.getCompilerOptions();
+  
+  for (const lazyRef of lazyImportRefs) {
+    // Resolve the module path using TypeScript's module resolution
+    const resolved = ts.resolveModuleName(
+      lazyRef.moduleSpecifier,
+      lazyRef.sourceFile.fileName,
+      compilerOptions,
+      ts.sys
+    );
+    
+    if (resolved.resolvedModule) {
+      const resolvedPath = resolved.resolvedModule.resolvedFileName;
+      const absoluteResolvedPath = path.resolve(resolvedPath);
+      
+      // Determine the directory to match
+      // If resolved to index.ts/index.js, also match files in the same directory
+      const absoluteResolvedDir = path.basename(resolvedPath).startsWith('index.')
+        ? path.dirname(absoluteResolvedPath)
+        : null;
+      
+      // Find all functions in the resolved module and add them to call graph
+      for (const [funcId, funcInfo] of callGraph.entries()) {
+        // Check if this function is from the lazy-loaded module
+        const funcFile = funcId.split(':')[0];
+        if (!funcFile) continue;
+        
+        const absoluteFuncPath = path.resolve(process.cwd(), funcFile);
+        const funcDir = path.dirname(absoluteFuncPath);
+        
+        // Match if:
+        // 1. The function is directly in the resolved file, OR
+        // 2. The function is in the same directory as the resolved index file
+        const isMatch = absoluteFuncPath === absoluteResolvedPath || 
+                        (absoluteResolvedDir && funcDir === absoluteResolvedDir);
+        
+        if (isMatch) {
+          // Add the lazy component as a caller of this function
+          if (!funcInfo.callers.some(c => c.callerId === lazyRef.callerId && c.line === lazyRef.line)) {
+            funcInfo.callers.push({
+              callerId: lazyRef.callerId,
+              line: lazyRef.line,
+            });
+          }
+        }
+      }
     }
   }
 

@@ -139,6 +139,16 @@ export class MarkdownFormatPlugin implements FormatPlugin {
           lines.push(`- **Impact**: ${getImpactLabel(level)}`);
           lines.push('');
 
+          // Lazy imports
+          if (funcInfo?.lazyImports && funcInfo.lazyImports.length > 0) {
+            lines.push('**Lazy Imports:**');
+            lines.push('');
+            for (const lazyImport of funcInfo.lazyImports) {
+              lines.push(`- 📦 \`${lazyImport.moduleSpecifier}\` (line ${lazyImport.line})`);
+            }
+            lines.push('');
+          }
+
           // Impact tree
           if (funcInfo && funcInfo.callers.length > 0) {
             lines.push('**Impact Chain:**');

@@ -1,7 +1,7 @@
 // Shared utilities for format plugins
 
 import path from 'path';
-import type { CallGraph, CallSite } from '../../types.js';
+import type { CallGraph, CallSite, LazyImport } from '../../types.js';
 
 /** Impact level based on combined score */
 export type ImpactLevel = 'critical' | 'high' | 'medium' | 'low' | 'none';
@@ -165,6 +165,7 @@ export interface ImpactedItem {
   impactLevel: ImpactLevel;
   line: number;
   callers: CallSite[];
+  lazyImports?: LazyImport[] | undefined;
 }
 
 /**
@@ -194,6 +195,7 @@ export function buildImpactedItems(
         impactLevel,
         line,
         callers: funcInfo?.callers ?? [],
+        lazyImports: funcInfo?.lazyImports,
       });
     }
   }
