@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.3.2
+
+### Patch Changes
+
+- 653f551: fix oidc by setting empty token
+
 ## 0.3.1
 
 ### Patch Changes
