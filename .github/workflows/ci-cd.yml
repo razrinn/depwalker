@@ -124,7 +124,7 @@ jobs:
         env:
           NPM_CONFIG_PROVENANCE: true
 
-      - name: Create Git Tag
+      - name: Create Git Tag and Release
         run: |
           PACKAGE_VERSION=$(node -p "require('./package.json').version")
           echo "Creating tag v$PACKAGE_VERSION"
@@ -132,3 +132,11 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git tag -a "v$PACKAGE_VERSION" -m "Release v$PACKAGE_VERSION"
           git push origin "v$PACKAGE_VERSION"
+          echo "Creating release v$PACKAGE_VERSION"
+          # Extract changelog notes for this version
+          NOTES=$(awk '/^## '$PACKAGE_VERSION'/{found=1; next} /^## /{found=0} found' CHANGELOG.md | sed '/^$/d')
+          gh release create "v$PACKAGE_VERSION" \
+            --title "v$PACKAGE_VERSION" \
+            --notes "$NOTES"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
