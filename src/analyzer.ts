@@ -136,17 +136,28 @@ export function buildCallGraph(program: ts.Program): CallGraph {
   }
   const lazyImportRefs: LazyImportRef[] = [];
 
+  // Track component aliases: variable -> component it references
+  // e.g., const Widget = BrokerFlowWidget -> Map['Widget'] = 'BrokerFlowWidget'
+  const componentAliases = new Map<string, string>();
+  // Track by file to avoid cross-file collisions
+  const fileComponentAliases = new Map<string, Map<string, string>>();
+  // Track callback relationships: callback function -> parent function that owns it
+  const callbackParents = new Map<string, string>();
+
   function visit(
     node: ts.Node,
     sourceFile: ts.SourceFile,
-    currentFunctionId: string | null
+    currentFunctionId: string | null,
+    parentFunctionId: string | null = null
   ) {
     let newCurrentFunctionId = currentFunctionId;
+    let newParentFunctionId = parentFunctionId;
 
     // Register function in call graph
     const functionId = getFunctionId(node, sourceFile);
     if (functionId) {
       newCurrentFunctionId = functionId;
+      newParentFunctionId = parentFunctionId;
       if (!callGraph.has(functionId)) {
         const start = sourceFile.getLineAndCharacterOfPosition(node.getStart());
         const end = sourceFile.getLineAndCharacterOfPosition(node.getEnd());
@@ -154,6 +165,11 @@ export function buildCallGraph(program: ts.Program): CallGraph {
           callers: [],
           definition: { startLine: start.line + 1, endLine: end.line + 1 },
         });
+      }
+      
+      // If this function has a parent (e.g., callback passed to useMemo), record it
+      if (parentFunctionId) {
+        callbackParents.set(functionId, parentFunctionId);
       }
     }
 
@@ -165,6 +181,18 @@ export function buildCallGraph(program: ts.Program): CallGraph {
         return typeChecker.getAliasedSymbol(symbol).getDeclarations()?.[0];
       }
       return symbol.getDeclarations()?.[0];
+    };
+
+    // Get the ultimate parent function for callbacks
+    // If callerId is a callback (e.g., useMemo callback), trace up to the parent function
+    const getUltimateCaller = (callerId: string): string => {
+      let current = callerId;
+      const visited = new Set<string>();
+      while (callbackParents.has(current) && !visited.has(current)) {
+        visited.add(current);
+        current = callbackParents.get(current)!;
+      }
+      return current;
     };
 
     // Add caller to callee's call site list
@@ -186,9 +214,12 @@ export function buildCallGraph(program: ts.Program): CallGraph {
       const { line } = sourceFile.getLineAndCharacterOfPosition(callNode.getStart());
       const lineNumber = line + 1;
 
+      // Resolve callback to ultimate parent (e.g., useMemo callback -> ContentItem)
+      const ultimateCallerId = getUltimateCaller(callerId);
+
       // Avoid duplicates
-      if (!callee.callers.some(c => c.callerId === callerId && c.line === lineNumber)) {
-        callee.callers.push({ callerId, line: lineNumber });
+      if (!callee.callers.some(c => c.callerId === ultimateCallerId && c.line === lineNumber)) {
+        callee.callers.push({ callerId: ultimateCallerId, line: lineNumber });
       }
     };
 
@@ -202,6 +233,90 @@ export function buildCallGraph(program: ts.Program): CallGraph {
         if (wrappedDecl && memoizedId) {
           recordCall(wrappedDecl, node, memoizedId);
         }
+      }
+    }
+
+    // Track component aliases: const Widget = SomeComponent
+    // This handles patterns like lazy-loaded components assigned to variables
+    if (ts.isVariableDeclaration(node) && node.initializer && ts.isIdentifier(node.name)) {
+      const aliasName = node.name.text;
+      let targetComponent: string | null = null;
+
+      // Direct assignment: const Widget = SomeComponent
+      if (ts.isIdentifier(node.initializer)) {
+        targetComponent = node.initializer.text;
+      }
+      // Property access: const Widget = components.SomeComponent
+      else if (ts.isPropertyAccessExpression(node.initializer) && ts.isIdentifier(node.initializer.name)) {
+        targetComponent = node.initializer.name.text;
+      }
+      // Lazy loaded: const Widget = lazy(() => import('./Component'))
+      else if (ts.isCallExpression(node.initializer)) {
+        const callExpr = node.initializer;
+        const exprText = callExpr.expression.getText();
+        if ((exprText === 'lazy' || exprText === 'React.lazy') && callExpr.arguments[0]) {
+          // For lazy imports, we'll resolve the actual component in the second pass
+          // For now, just mark it as a lazy alias
+          const arg = callExpr.arguments[0];
+          if (ts.isArrowFunction(arg) && arg.body) {
+            // Store for later resolution
+            const filePath = path.relative(process.cwd(), sourceFile.fileName);
+            if (!fileComponentAliases.has(filePath)) {
+              fileComponentAliases.set(filePath, new Map());
+            }
+            fileComponentAliases.get(filePath)!.set(aliasName, '__LAZY__');
+          }
+        }
+      }
+
+      // Store the alias mapping
+      if (targetComponent) {
+        const filePath = path.relative(process.cwd(), sourceFile.fileName);
+        if (!fileComponentAliases.has(filePath)) {
+          fileComponentAliases.set(filePath, new Map());
+        }
+        fileComponentAliases.get(filePath)!.set(aliasName, targetComponent);
+
+        // Also register the alias in call graph and link it as a caller of the target
+        // This enables the tree to show: Target -> Alias -> Alias's callers
+        const aliasId = `${filePath}:${aliasName}`;
+        const { line } = sourceFile.getLineAndCharacterOfPosition(node.name.getStart());
+        
+        if (!callGraph.has(aliasId)) {
+          callGraph.set(aliasId, {
+            callers: [],
+            definition: { startLine: line + 1, endLine: line + 1 },
+          });
+        }
+        
+        // Find the target component and add alias as its caller
+        for (const [funcId, funcInfo] of callGraph.entries()) {
+          const funcName = funcId.split(':')[1];
+          if (funcName === targetComponent) {
+            // Alias is a "caller" of the target (represents the assignment)
+            if (!funcInfo.callers.some(c => c.callerId === aliasId)) {
+              funcInfo.callers.push({
+                callerId: aliasId,
+                line: line + 1,
+              });
+            }
+            break;
+          }
+        }
+      }
+    }
+
+    // Track object property assignments: const widgets = { flow: SomeComponent }
+    if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name)) {
+      const propName = node.name.text;
+      if (ts.isIdentifier(node.initializer)) {
+        const targetComponent = node.initializer.text;
+        const filePath = path.relative(process.cwd(), sourceFile.fileName);
+        if (!fileComponentAliases.has(filePath)) {
+          fileComponentAliases.set(filePath, new Map());
+        }
+        // Store with property path notation: widgets.flow
+        // We'll need parent info to get the object name, handled below
       }
     }
 
@@ -245,20 +360,127 @@ export function buildCallGraph(program: ts.Program): CallGraph {
         calleeNode = node.tagName;
       }
 
+      // Handle JSX expression containers: {variable}
+      // This tracks when a React element stored in a variable is rendered
+      if (ts.isJsxExpression(node) && node.expression && ts.isIdentifier(node.expression)) {
+        const varName = node.expression.text;
+        const filePath = path.relative(process.cwd(), sourceFile.fileName);
+        const varId = `${filePath}:${varName}`;
+        
+        // If this variable is tracked in our call graph (e.g., widgetComponent from useMemo)
+        if (callGraph.has(varId)) {
+          const funcInfo = callGraph.get(varId)!;
+          const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+          const ultimateCaller = getUltimateCaller(currentFunctionId);
+          if (!funcInfo.callers.some(c => c.callerId === ultimateCaller && c.line === line + 1)) {
+            funcInfo.callers.push({
+              callerId: ultimateCaller,
+              line: line + 1,
+            });
+          }
+        }
+      }
+
       if (calleeNode) {
-        const calleeDecl = resolveDeclaration(calleeNode);
-        if (calleeDecl) {
-          recordCall(calleeDecl, node, currentFunctionId);
+        const filePath = path.relative(process.cwd(), sourceFile.fileName);
+        let isAlias = false;
+        
+        // Check if this is a component alias first
+        // If so, route the call through the alias instead of directly to the target
+        if (ts.isIdentifier(calleeNode)) {
+          const aliases = fileComponentAliases.get(filePath);
+          const aliasTarget = aliases?.get(calleeNode.text);
+          
+          if (aliasTarget && aliasTarget !== '__LAZY__') {
+            isAlias = true;
+            // Record call on the alias, not the original component
+            const aliasId = `${filePath}:${calleeNode.text}`;
+            if (!callGraph.has(aliasId)) {
+              const { line } = sourceFile.getLineAndCharacterOfPosition(calleeNode.getStart());
+              callGraph.set(aliasId, {
+                callers: [],
+                definition: { startLine: line + 1, endLine: line + 1 },
+              });
+            }
+            const aliasFuncInfo = callGraph.get(aliasId)!;
+            const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+            const ultimateCaller = currentFunctionId ? getUltimateCaller(currentFunctionId) : currentFunctionId;
+            if (!aliasFuncInfo.callers.some(c => c.callerId === ultimateCaller && c.line === line + 1)) {
+              aliasFuncInfo.callers.push({
+                callerId: ultimateCaller!,
+                line: line + 1,
+              });
+            }
+          }
+        }
+        
+        // Normal resolution for non-alias callees
+        if (!isAlias) {
+          const calleeDecl = resolveDeclaration(calleeNode);
+          if (calleeDecl) {
+            recordCall(calleeDecl, node, currentFunctionId);
+          } else if (ts.isIdentifier(calleeNode)) {
+            // Try to find declaration through TypeScript's type checker
+            const symbol = typeChecker.getSymbolAtLocation(calleeNode);
+            if (symbol) {
+              const decls = symbol.getDeclarations();
+              if (decls && decls.length > 0) {
+                const decl = decls[0];
+                if (decl) {
+                  const declId = getFunctionId(decl, decl.getSourceFile());
+                  if (declId) {
+                    // It's a function/component - record the call
+                    if (!callGraph.has(declId)) {
+                      const declSourceFile = decl.getSourceFile();
+                      const start = declSourceFile.getLineAndCharacterOfPosition(decl.getStart());
+                      const end = declSourceFile.getLineAndCharacterOfPosition(decl.getEnd());
+                      callGraph.set(declId, {
+                        callers: [],
+                        definition: { startLine: start.line + 1, endLine: end.line + 1 },
+                        lazyImports: [],
+                      });
+                    }
+                    const { line } = sourceFile.getLineAndCharacterOfPosition(node.getStart());
+                    const funcInfo = callGraph.get(declId)!;
+                    const ultimateCaller = currentFunctionId ? getUltimateCaller(currentFunctionId) : currentFunctionId;
+                    if (!funcInfo.callers.some(c => c.callerId === ultimateCaller && c.line === line + 1)) {
+                      funcInfo.callers.push({
+                        callerId: ultimateCaller!,
+                        line: line + 1,
+                      });
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
 
-    ts.forEachChild(node, child => visit(child, sourceFile, newCurrentFunctionId));
+    // Track callbacks passed as arguments (e.g., useMemo(() => {}, []))
+    // so we can link them to their parent function
+    if (currentFunctionId && (ts.isArrowFunction(node) || ts.isFunctionExpression(node))) {
+      // Check if this function is passed as an argument to a call expression
+      const parent = node.parent;
+      if (parent && ts.isCallExpression(parent)) {
+        // This is a callback passed directly to a call - the currentFunctionId is the parent
+        callbackParents.set(newCurrentFunctionId || '', currentFunctionId);
+      } else if (parent && ts.isArrayLiteralExpression(parent)) {
+        // Check if this array is passed as an argument (e.g., dependency array)
+        const grandparent = parent.parent;
+        if (grandparent && ts.isCallExpression(grandparent)) {
+          callbackParents.set(newCurrentFunctionId || '', currentFunctionId);
+        }
+      }
+    }
+
+    ts.forEachChild(node, child => visit(child, sourceFile, newCurrentFunctionId, newParentFunctionId));
   }
 
   for (const sourceFile of program.getSourceFiles()) {
     if (!sourceFile.isDeclarationFile) {
-      visit(sourceFile, sourceFile, null);
+      visit(sourceFile, sourceFile, null, null);
     }
   }
 
@@ -267,9 +489,11 @@ export function buildCallGraph(program: ts.Program): CallGraph {
   
   for (const lazyRef of lazyImportRefs) {
     // Resolve the module path using TypeScript's module resolution
+    // Use absolute path for the containing file to ensure resolution works
+    const containingFile = path.resolve(lazyRef.sourceFile.fileName);
     const resolved = ts.resolveModuleName(
       lazyRef.moduleSpecifier,
-      lazyRef.sourceFile.fileName,
+      containingFile,
       compilerOptions,
       ts.sys
     );

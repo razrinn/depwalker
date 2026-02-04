@@ -40,10 +40,10 @@ depwalker/
 │       ├── index.ts         # Plugin exports
 │       ├── shared/          # Shared utilities for plugins
 │       │   ├── utils.ts     # Impact calculation, stats, helpers
-│       │   └── tree-builder.ts  # Tree building for visualization
+│       │   └── tree-builder.ts  # Tree building and entry point collection
 │       ├── format-markdown/ # Markdown format plugin
 │       │   └── index.ts
-│       └── format-html/     # HTML format plugin
+│       └── format-html/     # HTML format plugin (modern premium design)
 │           └── index.ts
 ├── scripts/                  # Build scripts
 │   └── build.js             # esbuild bundler with version injection
@@ -52,7 +52,10 @@ depwalker/
 ├── .github/workflows/        # CI/CD pipelines
 ├── package.json
 ├── tsconfig.json
-└── AGENTS.md                # This file
+├── README.md                # User documentation
+├── AGENTS.md                # This file - agent documentation
+├── CONTRIBUTING.md          # Contribution guidelines
+└── RELEASE.md               # Release process guide
 ```
 
 ## Build Process
@@ -116,19 +119,60 @@ interface FormatPlugin {
 }
 ```
 
-**Plugin Registry:**
-- `registerPlugin()`: Register a new format plugin
-- `getPlugin(name)`: Get plugin by name
-- `getAvailableFormats()`: List all registered formats
+**Plugin Registry (`src/plugin/registry.ts`):**
+- `register(plugin)`: Register a new format plugin
+- `get(name)`: Get plugin by name
+- `has(name)`: Check if plugin is registered
+- `getAvailableFormats()`: List all registered format names
 
 **Shared Utilities (`src/plugin/shared/`):**
 - `calculateImpactScore()`: Calculate impact based on breadth and depth
 - `getImpactLevel()`: Convert score to impact level (critical/high/medium/low/none)
+- `getImpactLabel()`: Get display label with emoji
 - `buildTreeData()`: Build hierarchical tree for visualization
 - `buildImpactedItems()`: Build list of impacted items with stats
+- `collectEntryPoints()`: Collect entry points for testing
 
-#### 6. `src/types.ts` - Type Definitions
-Core interfaces for the application.
+#### 6. `src/plugin/format-html/` - HTML Format Plugin
+
+**Key Features:**
+- **Modern Premium Design**: Black/green cyberpunk aesthetic with Inter + JetBrains Mono fonts
+- **Function Grouping**: Automatically groups related functions from the same file with overlapping impact graphs
+- **Interactive Tree View**: Collapsible hierarchy with shared reference detection and navigation
+- **Interactive Graph View**: Radial SVG visualization with:
+  - Zoom/pan controls
+  - Fullscreen mode (F key shortcut)
+  - Layer filtering
+  - Convergence handling (curved edges for multiple incoming paths)
+  - Node selection with connection highlighting
+- **Entry Points Panel**: Shows test targets grouped by file with priority indicators
+
+**Function Grouping Logic:**
+Functions are grouped when they:
+- Are in the same file AND
+- Have caller/callee relationship OR share >70% overlap in dependents
+
+This prevents duplicate visualizations when multiple functions in one file affect the same dependency graph.
+
+#### 6. `src/plugin/index.ts` - Plugin Exports
+Central export point for plugin system:
+- Re-exports all plugin types
+- Re-exports shared utilities
+- Exports built-in plugin instances (`markdownFormatPlugin`, `htmlFormatPlugin`)
+
+#### 7. `src/types.ts` - Type Definitions
+Core interfaces for the application:
+```typescript
+interface CallSite { callerId: string; line: number; }
+interface LazyImport { moduleSpecifier: string; line: number; }
+interface FunctionInfo { 
+  callers: CallSite[]; 
+  definition: { startLine: number; endLine: number };
+  lazyImports?: LazyImport[];
+}
+type CallGraph = Map<string, FunctionInfo>;
+type OutputFormat = 'markdown' | 'html';
+```
 
 ## Development Conventions
 

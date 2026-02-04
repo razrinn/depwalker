@@ -122,7 +122,14 @@ npx depwalker@latest --output impact-report.md
 ### Output Formats
 
 - **markdown** (default): Clean, structured report perfect for sharing with AI assistants or documentation
-- **html**: Interactive web visualization with Tree view (collapsible hierarchy) and Graph view (node diagram), plus search and filters - best for exploring complex dependency graphs. **Automatically opens in browser** (use `--no-open` to disable).
+- **html**: Interactive web visualization with:
+  - **Tree View**: Collapsible hierarchy with shared reference detection
+  - **Graph View**: Radial node diagram with zoom/pan, fullscreen mode, and layer filtering
+  - **Function Grouping**: Automatically groups related functions from the same file
+  - **Entry Points**: Shows test targets with priority indicators
+  - **Search and Filters**: Find functions by name or filter by impact level
+  
+  Best for exploring complex dependency graphs. **Automatically opens in browser** (use `--no-open` to disable).
 
 ### Impact Scoring
 

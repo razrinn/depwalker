@@ -143,7 +143,7 @@ Add to `src/formatter.ts`:
 ```typescript
 import { jsonFormatPlugin } from './plugin/format-json/index.js';
 
-// Register built-in plugins
+// Register built-in plugins (around line 14)
 registerPlugin(markdownFormatPlugin);
 registerPlugin(htmlFormatPlugin);
 registerPlugin(jsonFormatPlugin);  // Add this line
