@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.4.2
+
+### Patch Changes
+
+- e22ce17: Fix hardcoded version in HTML plugin to use `process.env.PKG_VERSION`
+
 ## 0.4.1
 
 ### Patch Changes
