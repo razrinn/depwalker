@@ -60,7 +60,7 @@ export class HtmlFormatPlugin implements FormatPlugin {
     const entryPointsData = Array.from(uniqueEntryPoints.values()).sort((a, b) => b.depth - a.depth);
 
     // Get version from package or use default
-    const VERSION = '0.4.0';
+    const VERSION = process.env.PKG_VERSION || '0.0.0';
 
     // Render all components
     const sidebarHtml = renderSidebar(functionGroups);

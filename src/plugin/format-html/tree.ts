@@ -52,7 +52,7 @@ function renderTree(node, level, visited) {
   if (hasChildren) {
     html += '<div class="tree-children">';
     for (const child of node.children) {
-      html += renderTree(child, level + 1, new Set(visited));
+      html += renderTree(child, level + 1, visited);
     }
     html += '</div>';
   }

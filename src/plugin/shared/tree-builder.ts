@@ -54,7 +54,7 @@ export function buildTreeData(
     line: node?.definition.startLine ?? 0,
     isCircular: visited.has(funcId),
     children: (node?.callers
-      .map(c => buildTreeData(c.callerId, callGraph, maxDepth, currentDepth + 1, new Set(visited)))
+      .map(c => buildTreeData(c.callerId, callGraph, maxDepth, currentDepth + 1, visited))
       .filter(Boolean) ?? []) as TreeNode[],
   };
 }
