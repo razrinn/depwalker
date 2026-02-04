@@ -1,8 +1,5 @@
 # 🚶‍♂️ DepWalker
 
-[![npm version](https://badge.fury.io/js/depwalker.svg)](https://badge.fury.io/js/depwalker)
-[![npm downloads](https://img.shields.io/npm/dm/depwalker.svg)](https://www.npmjs.com/package/depwalker)
-[![Pipeline](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml/badge.svg)](https://github.com/razrinn/depwalker/actions/workflows/ci-cd.yml)
 [![npm version](https://badge.fury.io/js/depwalker.svg)](https://www.npmjs.com/package/depwalker)
 [![npm downloads](https://img.shields.io/npm/dm/depwalker.svg)](https://www.npmjs.com/package/depwalker)
 [![Node.js Version](https://img.shields.io/node/v/depwalker)](https://nodejs.org/)
