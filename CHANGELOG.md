@@ -1,5 +1,17 @@
 # depwalker
 
+## 0.4.1
+
+### Patch Changes
+
+- 8f53e94: Fix JavaScript syntax errors in HTML report generation
+
+  - Remove duplicate `renderedNodes` variable declaration causing redeclaration error
+  - Fix escaped single quotes (`\'`) in onclick handlers causing "Unexpected string" syntax error
+  - Tree view and graph view now render correctly in HTML output
+
+- 38aa5ee: improve scroll ux
+
 ## 0.4.0
 
 ### Minor Changes
