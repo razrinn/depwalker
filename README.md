@@ -14,6 +14,22 @@ A TypeScript dependency analysis tool that tracks the impact of code changes. De
 - **Refactoring Safety**: Verify dependencies when refactoring shared code
 - **Code Review**: Share impact analysis as Markdown or interactive HTML with your team
 
+## 🧠 How It Works
+
+DepWalker analyzes your TypeScript codebase in 4 steps:
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  1. Detect  │ →  │  2. Parse   │ →  │  3. Analyze │ →  │  4. Report  │
+│   Changes   │    │    Code     │    │ Dependencies│    │   Results   │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+```
+
+1. **Detect Changes** — Runs `git diff` to find files and line numbers you've modified
+2. **Parse Code** — Uses the TypeScript Compiler API to build an AST of your entire codebase
+3. **Analyze Dependencies** — Maps function calls to build a complete call graph, then traces which functions are affected by your changes
+4. **Generate Report** — Renders the impact analysis as Markdown or interactive HTML
+
 ## 📦 Installation
 
 **Prerequisites:** Node.js (v18+) and Git
@@ -131,6 +147,14 @@ npx depwalker@latest --output impact-report.md
   
   Best for exploring complex dependency graphs. **Automatically opens in browser** (use `--no-open` to disable).
 
+### Limitations
+
+- **TypeScript only** — Requires valid TypeScript (or JavaScript with `@ts-check`)
+- **Static analysis** — Cannot trace dynamic calls (e.g., `const fn = 'foo'; eval(fn)()`)
+- **Template literal imports** — Dynamic imports with template strings (`import(\`./${x}\`)`) are not resolved
+- **Git dependency** — Requires a git repository with uncommitted changes to analyze
+- **Single project** — Does not analyze cross-package dependencies in monorepos
+
 ### Impact Scoring
 
 Impact Score = Dependents + (Depth × 3)
@@ -145,24 +169,7 @@ Impact Score = Dependents + (Depth × 3)
 
 ## 🔌 Plugin Architecture
 
-DepWalker uses a plugin-based architecture for output formats, making it easy to add new output formats:
-
-```typescript
-// Example: Creating a JSON format plugin
-import type { FormatPlugin } from 'depwalker/plugin';
-
-export class JsonFormatPlugin implements FormatPlugin {
-  readonly name = 'json';
-  readonly extension = 'json';
-  readonly contentType = 'application/json';
-
-  generate(result: AnalysisResult, maxDepth: number | null): string {
-    return JSON.stringify(result, null, 2);
-  }
-}
-```
-
-See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed instructions on adding new formats.
+DepWalker uses a plugin-based architecture for output formats. Want to add JSON, CSV, or your own custom format? See [CONTRIBUTING.md](CONTRIBUTING.md) for a step-by-step guide to creating plugins.
 
 ## 🤝 Contributing
 

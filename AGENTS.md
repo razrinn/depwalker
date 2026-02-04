@@ -6,6 +6,60 @@
 
 DepWalker is a TypeScript dependency analysis CLI tool that tracks the impact of code changes across a codebase. It analyzes Git changes and shows which functions are affected, along with their dependency chains.
 
+## High-Level Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              CLI Entry                                  │
+│                         (src/index.ts)                                  │
+│                     Parses args, orchestrates flow                      │
+└─────────────────────────────────────────────────────────────────────────┘
+                                    │
+           ┌────────────────────────┼────────────────────────┐
+           ▼                        ▼                        ▼
+  ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+  │   Git Module    │    │ Analyzer Module │    │ Formatter Module│
+  │   (src/git.ts)  │    │(src/analyzer.ts)│    │(src/formatter.ts│
+  │                 │    │                 │    │                 │
+  │ • git diff -U0  │    │ • Create TS     │    │ • Route to      │
+  │ • Parse hunks   │    │   Program       │    │   plugins       │
+  │ • Extract line  │    │ • Build Call    │    │                 │
+  │   ranges        │    │   Graph (AST)   │    │                 │
+  └────────┬────────┘    │ • Find changed  │    └────────┬────────┘
+           │             │   functions     │             │
+           │             └────────┬────────┘             │
+           │                      │                      │
+           └──────────────────────┼──────────────────────┘
+                                  ▼
+                    ┌─────────────────────────┐
+                    │     AnalysisResult      │
+                    │  ┌─────────────────┐    │
+                    │  │ changedFiles    │    │
+                    │  │ changedFunctions│    │
+                    │  │ callGraph       │    │
+                    │  └─────────────────┘    │
+                    └─────────────────────────┘
+                                  │
+                    ┌─────────────┴─────────────┐
+                    ▼                           ▼
+         ┌─────────────────────┐    ┌─────────────────────┐
+         │  Markdown Plugin    │    │    HTML Plugin      │
+         │(format-markdown/)   │    │   (format-html/)    │
+         │                     │    │                     │
+         │ • Tables & lists    │    │ • Interactive tree  │
+         │ • Impact scores     │    │ • Radial graph viz  │
+         │ • Static output     │    │ • Function grouping │
+         └─────────────────────┘    └─────────────────────┘
+```
+
+### Data Flow
+
+1. **Input**: Uncommitted Git changes in a TypeScript project
+2. **Git Parsing**: `getGitDiff()` → `parseGitDiff()` → `Map<filepath, lineNumbers[]>`
+3. **AST Analysis**: TS Compiler API builds `Program` → traverses AST → `CallGraph`
+4. **Impact Tracing**: For each changed function, walk the call graph to find dependents
+5. **Output**: Plugin generates formatted report (Markdown/HTML)
+
 ### Key Features
 
 - **Function Impact Analysis**: Traces function call chains from changed functions
@@ -109,16 +163,6 @@ Thin wrapper that delegates to format plugins:
 
 #### 5. `src/plugin/` - Plugin System
 
-**Plugin Interface:**
-```typescript
-interface FormatPlugin {
-  readonly name: string;        // Unique identifier (e.g., 'markdown')
-  readonly extension: string;   // File extension (e.g., 'md')
-  readonly contentType: string; // MIME type
-  generate(result: AnalysisResult, maxDepth: number | null): string;
-}
-```
-
 **Plugin Registry (`src/plugin/registry.ts`):**
 - `register(plugin)`: Register a new format plugin
 - `get(name)`: Get plugin by name
@@ -154,7 +198,7 @@ Functions are grouped when they:
 
 This prevents duplicate visualizations when multiple functions in one file affect the same dependency graph.
 
-#### 6. `src/plugin/index.ts` - Plugin Exports
+#### 7. `src/plugin/index.ts` - Plugin Exports
 Central export point for plugin system:
 - Re-exports all plugin types
 - Re-exports shared utilities
