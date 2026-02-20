@@ -1,5 +1,11 @@
 # depwalker
 
+## 0.6.0
+
+### Minor Changes
+
+- 4575efd: Rename entry points to test targets, add BFS-based collection with coverage tracking, and refine broad roots
+
 ## 0.5.0
 
 ### Minor Changes
