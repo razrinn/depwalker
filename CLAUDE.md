@@ -48,7 +48,7 @@ DepWalker is a TypeScript dependency analysis CLI tool that tracks the impact of
          │                     │    │                     │
          │ • Compact tables    │    │ • Single-page view  │
          │ • Inline summary    │    │ • Collapsible trees │
-         │ • Entry points list │    │ • Entry points tbl  │
+         │ • Test targets list │    │ • Test targets tbl  │
          └─────────────────────┘    └─────────────────────┘
 ```
 
@@ -184,7 +184,7 @@ depwalker/
 │       ├── index.ts         # Plugin exports
 │       ├── shared/          # Shared utilities for plugins
 │       │   ├── utils.ts     # Impact calculation, stats, helpers
-│       │   └── tree-builder.ts  # Tree building and entry point collection
+│       │   └── tree-builder.ts  # Tree building and test target collection
 │       ├── format-markdown/ # Markdown format plugin
 │       │   └── index.ts
 │       └── format-html/     # HTML format plugin (single-page static)
@@ -299,7 +299,8 @@ Thin wrapper that delegates to format plugins:
 - `getImpactLabel()`: Get display label with emoji
 - `buildTreeData()`: Build hierarchical tree for visualization
 - `buildImpactedItems()`: Build list of impacted items with stats
-- `collectEntryPoints()`: Collect entry points for testing
+- `collectEntryPoints()`: Collect test targets (root callers) via BFS
+- `refineTestTargets()`: Push down overly-broad convergent roots and deduplicate
 
 #### 6. `src/plugin/format-html/` - HTML Format Plugin
 
@@ -310,7 +311,7 @@ Single-page static HTML report with minimal design. All content is server-render
 - `index.ts` — Plugin class, builds data and delegates to templates
 - `types.ts` — Type imports
 - `styles.ts` — Clean light-theme CSS (~250 lines), system font stack, no external fonts
-- `templates.ts` — HTML rendering: tree nodes, changed nodes cards, entry points table, full page layout
+- `templates.ts` — HTML rendering: tree nodes, changed nodes cards, test targets table, full page layout
 - `scripts.ts` — Minimal JS (~15 lines): tree collapse/expand only
 
 **Key Features:**
@@ -318,7 +319,7 @@ Single-page static HTML report with minimal design. All content is server-render
 - **Single-page layout**: All changed nodes with inline dependency trees, visible without clicking
 - **Collapsible tree view**: Each changed node shows its callers as a collapsible tree
 - **Impact badges**: Color-coded score badges per node
-- **Entry points table**: Shows test targets with depth and priority
+- **Test targets table**: Shows test targets with depth, coverage, and priority
 
 #### 7. `src/plugin/index.ts` - Plugin Exports
 
@@ -368,6 +369,7 @@ type OutputFormat = "markdown" | "html";
 - `find*`: Functions that search/filter data
 - `generate*`: Functions that create formatted output
 - `register*`: Functions that register plugins/components
+- `refine*`: Functions that iteratively improve/narrow results
 
 ### Error Handling
 
@@ -486,7 +488,7 @@ To add a new format (e.g., JSON):
 | Scenario                          | Impact              | Mitigation                              |
 | --------------------------------- | ------------------- | --------------------------------------- |
 | 10,000+ functions                 | ~10s analysis time  | Efficient Set-based visited tracking    |
-| 100+ entry points from one change | Large report size   | Depth limiting with `--depth` flag      |
+| 100+ test targets from one change | Large report size   | Depth limiting with `--depth` flag; `refineTestTargets()` pushes down broad roots |
 | Complex circular dependencies     | Stack overflow risk | All recursive functions track visited   |
 | Large monorepo with many files    | Memory usage        | Only analyzes files in tsconfig include |
 

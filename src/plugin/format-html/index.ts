@@ -6,9 +6,9 @@ import {
   buildImpactedItems,
   calculateStats,
 } from '../shared/utils.js';
-import { buildTreeData, collectEntryPoints, type EntryPoint, type TreeNode } from '../shared/tree-builder.js';
+import { buildTreeData, collectEntryPoints, refineTestTargets, type TestTarget, type TreeNode } from '../shared/tree-builder.js';
 import { styles } from './styles.js';
-import { renderHtml, renderSummary, renderChangedNodes, renderEntryPoints } from './templates.js';
+import { renderHtml, renderSummary, renderChangedNodes, renderTestTargets } from './templates.js';
 import { generateScripts } from './scripts.js';
 
 /**
@@ -31,28 +31,21 @@ export class HtmlFormatPlugin implements FormatPlugin {
       treeLookup.set(item.funcId, buildTreeData(item.funcId, callGraph, maxDepth));
     }
 
-    // Collect all entry points, deduplicated
-    const allEntryPoints: EntryPoint[] = [];
+    // Collect all test targets, then refine (push down from overly-broad roots)
+    const allTargets: TestTarget[] = [];
     for (const item of impactedItems) {
-      allEntryPoints.push(...collectEntryPoints(item.funcId, callGraph, maxDepth));
+      allTargets.push(...collectEntryPoints(item.funcId, callGraph, maxDepth));
     }
-    const uniqueEntryPoints = new Map<string, EntryPoint>();
-    for (const ep of allEntryPoints) {
-      const existing = uniqueEntryPoints.get(ep.id);
-      if (!existing || ep.depth < existing.depth) {
-        uniqueEntryPoints.set(ep.id, ep);
-      }
-    }
-    const entryPointsData = Array.from(uniqueEntryPoints.values()).sort((a, b) => b.depth - a.depth);
+    const testTargets = refineTestTargets(allTargets, callGraph);
 
     const VERSION = process.env.PKG_VERSION || '0.0.0';
 
     const summaryHtml = renderSummary(stats);
     const changedNodesHtml = renderChangedNodes(impactedItems, treeLookup);
-    const entryPointsHtml = renderEntryPoints(entryPointsData);
+    const testTargetsHtml = renderTestTargets(testTargets);
     const scripts = generateScripts();
 
-    return renderHtml(VERSION, styles, stats, summaryHtml, changedNodesHtml, entryPointsHtml, scripts);
+    return renderHtml(VERSION, styles, stats, summaryHtml, changedNodesHtml, testTargetsHtml, scripts);
   }
 }
 

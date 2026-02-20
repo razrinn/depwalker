@@ -13,10 +13,12 @@ export const IMPACT_THRESHOLDS = {
   medium: 4,
 } as const;
 
-/** Depth thresholds for test priority levels */
+/** Depth thresholds for test priority levels (lower depth = higher priority) */
 export const TEST_PRIORITY_THRESHOLDS = {
-  high: 3,
-  medium: 1,
+  /** Direct callers (depth <= this) are high priority */
+  high: 1,
+  /** Callers within this depth are medium priority, beyond is low */
+  medium: 3,
 } as const;
 
 /** Jaccard overlap threshold for grouping functions in HTML plugin */

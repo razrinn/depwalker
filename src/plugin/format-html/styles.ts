@@ -208,7 +208,7 @@ body {
   font-style: italic;
 }
 
-/* Entry points */
+/* Test targets */
 .entry-table {
   width: 100%;
   border-collapse: collapse;

@@ -1,6 +1,6 @@
 // HTML templates for format-html plugin
 
-import type { TreeNode, EntryPoint } from '../shared/tree-builder.js';
+import type { TreeNode, TestTarget } from '../shared/tree-builder.js';
 import type { ImpactedItem, ReportStats } from '../shared/utils.js';
 import { truncatePath } from '../shared/utils.js';
 import { TEST_PRIORITY_THRESHOLDS } from '../../constants.js';
@@ -99,22 +99,26 @@ export function renderChangedNodes(
 }
 
 /**
- * Render the entry points table
+ * Render the test targets table
  */
-export function renderEntryPoints(entryPoints: EntryPoint[]): string {
-  if (entryPoints.length === 0) {
-    return '<p class="no-deps">No entry points found.</p>';
+export function renderTestTargets(targets: TestTarget[]): string {
+  if (targets.length === 0) {
+    return '<p class="no-deps">No test targets found.</p>';
   }
 
-  const rows = entryPoints.map(ep => {
-    const priority = ep.depth >= TEST_PRIORITY_THRESHOLDS.high ? '🔴 High' :
-      ep.depth >= TEST_PRIORITY_THRESHOLDS.medium ? '🟡 Medium' : '🟢 Low';
-    const depthLabel = ep.depth === 0 ? 'direct' : `${ep.depth} level${ep.depth > 1 ? 's' : ''}`;
+  const rows = targets.map(t => {
+    // Lower depth = closer to change = higher priority
+    const priority = t.depth <= TEST_PRIORITY_THRESHOLDS.high ? '🔴 High' :
+      t.depth <= TEST_PRIORITY_THRESHOLDS.medium ? '🟡 Medium' : '🟢 Low';
+    const depthLabel = `${t.depth} level${t.depth > 1 ? 's' : ''}`;
+    const coversNames = t.covers.map(c => escapeHtml(c.split(':')[1] || c));
+    const coversHtml = coversNames.map(n => `<code>${n}</code>`).join(' ');
 
     return `<tr>
-      <td>${escapeHtml(ep.name)}</td>
-      <td>${escapeHtml(truncatePath(ep.file))}:${ep.line}</td>
+      <td>${escapeHtml(t.name)}</td>
+      <td>${escapeHtml(truncatePath(t.file))}:${t.line}</td>
       <td>${depthLabel}</td>
+      <td>${coversHtml}</td>
       <td>${priority}</td>
     </tr>`;
   }).join('');
@@ -122,15 +126,16 @@ export function renderEntryPoints(entryPoints: EntryPoint[]): string {
   return `<table class="entry-table">
     <thead>
       <tr>
-        <th>Entry Point</th>
+        <th>Test Target</th>
         <th>File</th>
         <th>Depth</th>
+        <th>Covers</th>
         <th>Priority</th>
       </tr>
     </thead>
     <tbody>${rows}</tbody>
   </table>
-  <div class="entry-count">${entryPoints.length} entry point${entryPoints.length > 1 ? 's' : ''} to test</div>`;
+  <div class="entry-count">${targets.length} test target${targets.length > 1 ? 's' : ''}</div>`;
 }
 
 /**
@@ -166,7 +171,7 @@ export function renderHtml(
   stats: ReportStats,
   summaryHtml: string,
   changedNodesHtml: string,
-  entryPointsHtml: string,
+  testTargetsHtml: string,
   scripts: string
 ): string {
   const totalDependents = ''; // computed in index.ts and passed via stats text
@@ -195,8 +200,8 @@ export function renderHtml(
     </div>
 
     <div class="section">
-      <div class="section-title">Entry Points to Test</div>
-      ${entryPointsHtml}
+      <div class="section-title">Test Targets</div>
+      ${testTargetsHtml}
     </div>
   </div>
   <script>${scripts}</script>

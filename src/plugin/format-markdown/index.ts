@@ -7,8 +7,7 @@ import {
   buildImpactedItems,
   calculateStats,
 } from '../shared/utils.js';
-import { collectEntryPoints, groupEntryPointsByFile, type EntryPoint } from '../shared/tree-builder.js';
-import { TEST_PRIORITY_THRESHOLDS } from '../../constants.js';
+import { collectEntryPoints, refineTestTargets, type TestTarget } from '../shared/tree-builder.js';
 
 /**
  * Markdown format plugin - generates compact markdown reports
@@ -59,44 +58,32 @@ export class MarkdownFormatPlugin implements FormatPlugin {
       lines.push('');
     }
 
-    // Entry Points
-    lines.push('## Entry Points');
+    // Test Targets
+    lines.push('## Test Targets');
     lines.push('');
 
-    const allEntryPoints: Array<EntryPoint & { changedFunc: string }> = [];
+    const allTargets: TestTarget[] = [];
     for (const [, funcIds] of changedFunctions) {
       for (const funcId of funcIds) {
-        const eps = collectEntryPoints(funcId, callGraph, maxDepth);
-        for (const ep of eps) {
-          allEntryPoints.push({ ...ep, changedFunc: funcId });
-        }
+        allTargets.push(...collectEntryPoints(funcId, callGraph, maxDepth));
       }
     }
 
-    // Deduplicate
-    const uniqueEntryPoints = new Map<string, EntryPoint>();
-    for (const ep of allEntryPoints) {
-      const existing = uniqueEntryPoints.get(ep.id);
-      if (!existing || ep.depth < existing.depth) {
-        uniqueEntryPoints.set(ep.id, ep);
-      }
-    }
+    const sortedTargets = refineTestTargets(allTargets, callGraph);
 
-    const sortedEntryPoints = Array.from(uniqueEntryPoints.values())
-      .sort((a, b) => b.depth - a.depth);
-
-    if (sortedEntryPoints.length === 0) {
-      lines.push('*No entry points found — your changes may not affect any testable code paths.*');
+    if (sortedTargets.length === 0) {
+      lines.push('*No test targets found — your changes may not affect any testable code paths.*');
     } else {
-      lines.push('| Entry Point | File | Depth |');
-      lines.push('|-------------|------|-------|');
+      lines.push('| Test Target | File | Depth | Covers |');
+      lines.push('|-------------|------|-------|--------|');
 
-      for (const ep of sortedEntryPoints) {
-        const depthLabel = ep.depth === 0 ? 'direct' : `${ep.depth} level${ep.depth > 1 ? 's' : ''}`;
-        lines.push(`| \`${ep.name}\` | \`${truncatePath(ep.file)}:${ep.line}\` | ${depthLabel} |`);
+      for (const t of sortedTargets) {
+        const depthLabel = `${t.depth} level${t.depth > 1 ? 's' : ''}`;
+        const coversLabel = t.covers.map(c => `\`${c.split(':')[1] || c}\``).join(', ');
+        lines.push(`| \`${t.name}\` | \`${truncatePath(t.file)}:${t.line}\` | ${depthLabel} | ${coversLabel} |`);
       }
       lines.push('');
-      lines.push(`${sortedEntryPoints.length} entry point${sortedEntryPoints.length > 1 ? 's' : ''} to test`);
+      lines.push(`${sortedTargets.length} test target${sortedTargets.length > 1 ? 's' : ''}`);
     }
 
     return lines.join('\n');

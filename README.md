@@ -96,14 +96,14 @@ npx depwalker@latest --output impact-report.md
 | **handleClick** | `src/components/Button.tsx:23` | 🟠 12  | 8          | 2     |
 | **formatDate**  | `src/utils/helpers.ts:10`  | 🟡 6   | 4          | 1     |
 
-## Entry Points
+## Test Targets
 
-| Entry Point | File                            | Depth    |
-| ----------- | ------------------------------- | -------- |
-| `App`       | `src/App.tsx:5`                 | 3 levels |
-| `main`      | `src/index.ts:1`               | direct   |
+| Test Target | File                            | Depth    | Covers               |
+| ----------- | ------------------------------- | -------- | -------------------- |
+| `main`      | `src/index.ts:1`               | 1 level  | `handleClick`        |
+| `App`       | `src/App.tsx:5`                 | 3 levels | `handleClick`        |
 
-2 entry points to test
+2 test targets
 ```
 
 ## 🔧 Options
@@ -118,8 +118,8 @@ npx depwalker@latest --output impact-report.md
 
 ### Output Formats
 
-- **markdown** (default): Compact, scannable report with a changed nodes table and entry points list. Great for sharing with AI assistants or pasting into PRs.
-- **html**: Single-page static report with collapsible dependency trees per changed node, impact badges, and an entry points table. Everything visible on one page — no clicking required. **Automatically opens in browser** (use `--no-open` to disable).
+- **markdown** (default): Compact, scannable report with a changed nodes table and test targets list. Great for sharing with AI assistants or pasting into PRs.
+- **html**: Single-page static report with collapsible dependency trees per changed node, impact badges, and a test targets table. Everything visible on one page — no clicking required. **Automatically opens in browser** (use `--no-open` to disable).
 
 ### Limitations
 
