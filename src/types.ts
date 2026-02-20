@@ -10,9 +10,21 @@ export interface LazyImport {
   line: number;
 }
 
+/** Distinguishes what kind of code node a graph entry represents */
+export type NodeKind =
+  | 'function'        // FunctionDeclaration, ArrowFunction, FunctionExpression
+  | 'method'          // MethodDeclaration
+  | 'constructor'     // ConstructorDeclaration
+  | 'accessor'        // GetAccessor, SetAccessor
+  | 'class-property'  // PropertyDeclaration in class (non-function value)
+  | 'class'           // ClassDeclaration (container)
+  | 'variable'        // Non-function VariableDeclaration (const CONFIG = {...})
+  | 'enum';           // EnumDeclaration
+
 export interface FunctionInfo {
   callers: CallSite[];
   definition: { startLine: number; endLine: number };
+  kind?: NodeKind;
   lazyImports?: LazyImport[];
 }
 

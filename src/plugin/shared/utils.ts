@@ -2,6 +2,7 @@
 
 import path from 'path';
 import type { CallGraph, CallSite, LazyImport } from '../../types.js';
+import { IMPACT_DEPTH_WEIGHT, IMPACT_THRESHOLDS } from '../../constants.js';
 
 /** Impact level based on combined score */
 export type ImpactLevel = 'critical' | 'high' | 'medium' | 'low' | 'none';
@@ -43,8 +44,10 @@ export function collectAllDependents(
 
   if (node?.callers) {
     for (const caller of node.callers) {
-      dependents.push(caller.callerId);
-      dependents.push(...collectAllDependents(caller.callerId, callGraph, maxDepth, new Set(visited)));
+      if (!visited.has(caller.callerId)) {
+        dependents.push(caller.callerId);
+        dependents.push(...collectAllDependents(caller.callerId, callGraph, maxDepth, visited));
+      }
     }
   }
 
@@ -92,9 +95,7 @@ export function calculateImpactScore(
   const breadth = dependents.length;
   const depth = getMaxImpactDepth(functionId, callGraph);
 
-  // Score formula: breadth + (depth * 3)
-  // Depth weighted 3x because a 5-level deep chain is more concerning than 5 sibling callers
-  const score = breadth + (depth * 3);
+  const score = breadth + (depth * IMPACT_DEPTH_WEIGHT);
 
   return { score, breadth, depth };
 }
@@ -104,9 +105,9 @@ export function calculateImpactScore(
  * Thresholds: Critical (20+), High (10-19), Medium (4-9), Low (1-3), None (0)
  */
 export function getImpactLevel(score: number): ImpactLevel {
-  if (score >= 20) return 'critical';
-  if (score >= 10) return 'high';
-  if (score >= 4) return 'medium';
+  if (score >= IMPACT_THRESHOLDS.critical) return 'critical';
+  if (score >= IMPACT_THRESHOLDS.high) return 'high';
+  if (score >= IMPACT_THRESHOLDS.medium) return 'medium';
   if (score > 0) return 'low';
   return 'none';
 }

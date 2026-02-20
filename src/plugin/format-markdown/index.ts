@@ -6,12 +6,12 @@ import {
   truncatePath,
   buildImpactedItems,
   calculateStats,
-  getImpactLevel,
   getImpactLabel,
   calculateImpactScore,
-  type ImpactLevel,
+  getImpactLevel,
 } from '../shared/utils.js';
 import { buildImpactTree, collectEntryPoints, groupEntryPointsByFile, type EntryPoint } from '../shared/tree-builder.js';
+import { TEST_PRIORITY_THRESHOLDS } from '../../constants.js';
 
 /**
  * Markdown format plugin - generates markdown reports
@@ -26,62 +26,25 @@ export class MarkdownFormatPlugin implements FormatPlugin {
 
     const lines: string[] = [];
 
+    // Build data using shared utilities
+    const impactedItems = buildImpactedItems(changedFunctions, callGraph);
+    const stats = calculateStats(changedFiles, impactedItems);
+
     // Header
     lines.push('# Dependency Impact Analysis');
     lines.push('');
-
-    // Summary section
-    const totalFunctions = Array.from(changedFunctions.values()).reduce((sum, set) => sum + set.size, 0);
-
-    // Calculate impact stats using new scoring system
-    let criticalImpact = 0;
-    let highImpact = 0;
-    let mediumImpact = 0;
-    let lowImpact = 0;
-    const impactedItems: Array<{
-      name: string;
-      file: string;
-      funcId: string;
-      dependents: number;
-      depth: number;
-      score: number;
-      level: ImpactLevel;
-    }> = [];
-
-    for (const [filePath, funcIds] of changedFunctions) {
-      for (const funcId of funcIds) {
-        const { score, breadth, depth } = calculateImpactScore(funcId, callGraph);
-        const level = getImpactLevel(score);
-
-        if (level === 'critical') criticalImpact++;
-        else if (level === 'high') highImpact++;
-        else if (level === 'medium') mediumImpact++;
-        else if (level === 'low') lowImpact++;
-
-        const name = funcId.split(':')[1] || 'unknown';
-        impactedItems.push({
-          name,
-          file: filePath,
-          funcId,
-          dependents: breadth,
-          depth,
-          score,
-          level,
-        });
-      }
-    }
 
     lines.push('## Summary');
     lines.push('');
     lines.push(`| Metric | Value |`);
     lines.push(`|--------|-------|`);
-    lines.push(`| Changed Files | ${changedFiles.length} |`);
-    lines.push(`| Changed Functions | ${totalFunctions} |`);
-    lines.push(`| 🔴 Critical Impact (score 20+) | ${criticalImpact} |`);
-    lines.push(`| 🟠 High Impact (score 10-19) | ${highImpact} |`);
-    lines.push(`| 🟡 Medium Impact (score 4-9) | ${mediumImpact} |`);
-    lines.push(`| 🟢 Low Impact (score 1-3) | ${lowImpact} |`);
-    lines.push(`| ⚪ No Impact | ${totalFunctions - criticalImpact - highImpact - mediumImpact - lowImpact} |`);
+    lines.push(`| Changed Files | ${stats.changedFiles} |`);
+    lines.push(`| Changed Functions | ${stats.changedFunctions} |`);
+    lines.push(`| 🔴 Critical Impact (score 20+) | ${stats.critical} |`);
+    lines.push(`| 🟠 High Impact (score 10-19) | ${stats.high} |`);
+    lines.push(`| 🟡 Medium Impact (score 4-9) | ${stats.medium} |`);
+    lines.push(`| 🟢 Low Impact (score 1-3) | ${stats.low} |`);
+    lines.push(`| ⚪ No Impact | ${stats.none} |`);
     lines.push('');
 
     // Changed files
@@ -92,10 +55,9 @@ export class MarkdownFormatPlugin implements FormatPlugin {
     }
     lines.push('');
 
-    // Top impacted
+    // Top impacted (items already sorted by score from buildImpactedItems)
     const topImpacted = impactedItems
       .filter(i => i.score > 0)
-      .sort((a, b) => b.score - a.score)
       .slice(0, 5);
 
     if (topImpacted.length > 0) {
@@ -104,9 +66,9 @@ export class MarkdownFormatPlugin implements FormatPlugin {
       lines.push(`| Function | File | Score | Dependents | Depth |`);
       lines.push(`|----------|------|-------|------------|-------|`);
       for (const item of topImpacted) {
-        const scoreBadge = item.level === 'critical' ? '🔴' :
-          item.level === 'high' ? '🟠' :
-            item.level === 'medium' ? '🟡' : '🟢';
+        const scoreBadge = item.impactLevel === 'critical' ? '🔴' :
+          item.impactLevel === 'high' ? '🟠' :
+            item.impactLevel === 'medium' ? '🟡' : '🟢';
         lines.push(`| **${item.name}** | \`${truncatePath(item.file)}\` | ${scoreBadge} ${item.score} | ${item.dependents} | ${item.depth} |`);
       }
       lines.push('');
@@ -155,7 +117,7 @@ export class MarkdownFormatPlugin implements FormatPlugin {
       
       for (const [file, points] of byFile) {
         for (const ep of points) {
-          const priority = ep.depth >= 3 ? '🔴 High' : ep.depth >= 1 ? '🟡 Medium' : '🟢 Low';
+          const priority = ep.depth >= TEST_PRIORITY_THRESHOLDS.high ? '🔴 High' : ep.depth >= TEST_PRIORITY_THRESHOLDS.medium ? '🟡 Medium' : '🟢 Low';
           const depthLabel = ep.depth === 0 ? 'Direct' : `${ep.depth} level${ep.depth > 1 ? 's' : ''}`;
           lines.push(`| **\`${ep.name}\`** | \`${truncatePath(file)}\` | ${depthLabel} | ${priority} |`);
         }

@@ -1,67 +1,19 @@
 #!/usr/bin/env node
 import { Command } from 'commander';
-import { writeFileSync, mkdtempSync, realpathSync } from 'fs';
+import { writeFileSync, mkdtempSync } from 'fs';
 import { tmpdir } from 'os';
 import { exec } from 'child_process';
 import { promisify } from 'util';
 import path from 'path';
 import { getGitDiff, parseGitDiff } from './git.js';
 import { createTsProgram, buildCallGraph, findChangedFunctions } from './analyzer.js';
-import { printResults, generateReport } from './formatter.js';
+import { generateReport } from './formatter.js';
 import type { AnalysisResult, OutputFormat } from './types.js';
+import { Spinner } from './spinner.js';
 
 const execAsync = promisify(exec);
 
 const VERSION = process.env.PKG_VERSION || '0.0.0';
-
-// Simple spinner
-class Spinner {
-  private frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-  private interval: NodeJS.Timeout | null = null;
-  private frameIndex = 0;
-  private text: string;
-  
-  constructor(text: string) {
-    this.text = text;
-  }
-
-  updateText(text: string): void {
-    this.text = text;
-  }
-
-  start(): void {
-    process.stdout.write('\x1B[?25l');
-    this.interval = setInterval(() => {
-      const frame = this.frames[this.frameIndex];
-      process.stdout.write(`\r\x1b[36m${frame}\x1b[0m ${this.text}`);
-      this.frameIndex = (this.frameIndex + 1) % this.frames.length;
-    }, 80);
-  }
-
-  succeed(text?: string): void {
-    this.stop();
-    console.log(`\r\x1b[32m✓\x1b[0m ${text || this.text}`);
-  }
-
-  fail(text?: string): void {
-    this.stop();
-    console.log(`\r\x1b[31m✗\x1b[0m ${text || this.text}`);
-  }
-
-  info(text?: string): void {
-    this.stop();
-    console.log(`\r\x1b[36mℹ\x1b[0m ${text || this.text}`);
-  }
-
-  stop(): void {
-    if (this.interval) {
-      clearInterval(this.interval);
-      this.interval = null;
-    }
-    process.stdout.write('\r\x1B[K');
-    process.stdout.write('\x1B[?25h');
-  }
-}
 
 interface CliOptions {
   depth?: number;
@@ -130,15 +82,15 @@ function runAnalysis(options: CliOptions): void {
     spinner.updateText('Building call graph...');
     spinner.start();
     const callGraph = buildCallGraph(program);
-    const funcCount = callGraph.size;
-    spinner.succeed(`Discovered ${funcCount} functions`);
+    const nodeCount = callGraph.size;
+    spinner.succeed(`Discovered ${nodeCount} nodes`);
 
-    // Find changed functions
-    spinner.updateText('Identifying changed functions...');
+    // Find changed nodes
+    spinner.updateText('Identifying changed nodes...');
     spinner.start();
     const changedFunctions = findChangedFunctions(callGraph, changedLines);
     const changedCount = Array.from(changedFunctions.values()).reduce((sum, set) => sum + set.size, 0);
-    spinner.succeed(`Found ${changedCount} changed function${changedCount !== 1 ? 's' : ''}`);
+    spinner.succeed(`Found ${changedCount} changed node${changedCount !== 1 ? 's' : ''}`);
 
     const result: AnalysisResult = {
       changedFiles: Array.from(changedLines.keys()),

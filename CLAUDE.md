@@ -66,17 +66,105 @@ DepWalker is a TypeScript dependency analysis CLI tool that tracks the impact of
 - **Git Integration**: Automatically detects uncommitted changes via `git diff`
 - **TypeScript Compiler API**: Uses native TS compiler for accurate AST analysis
 - **Plugin-Based Output**: Extensible format system with Markdown and HTML plugins built-in
+- **Circular Dependency Handling**: Detects and breaks cycles in the call graph
+- **React Pattern Support**: Handles memo, lazy, JSX, and HOC patterns
+
+## Analysis Capabilities
+
+### Supported Function Types
+
+The analyzer (`src/analyzer.ts`) recognizes these function declarations:
+
+| Type                      | AST Node                                        | Example                     |
+| ------------------------- | ----------------------------------------------- | --------------------------- |
+| Function Declaration      | `FunctionDeclaration`                           | `function foo() {}`         |
+| Arrow Function (variable) | `VariableDeclaration` with `ArrowFunction`      | `const foo = () => {}`      |
+| Function Expression       | `VariableDeclaration` with `FunctionExpression` | `const foo = function() {}` |
+| Method Declaration        | `MethodDeclaration`                             | `class X { foo() {} }`      |
+| Object Property Method    | `PropertyAssignment` with function              | `{ setTab: (id) => {} }`    |
+| Shorthand Method          | `MethodDeclaration` in object                   | `{ setTab(id) {} }`         |
+
+### Supported Call Patterns
+
+The analyzer tracks these call patterns and maps them to their declarations:
+
+| Pattern                   | Detection Method                             | Notes                           |
+| ------------------------- | -------------------------------------------- | ------------------------------- |
+| Direct function calls     | `CallExpression` with identifier             | Standard function calls         |
+| JSX Elements              | `JsxOpeningElement`, `JsxSelfClosingElement` | React component usage           |
+| JSX Expression Containers | `JsxExpression` with identifier              | `{variable}` rendering          |
+| Wrapped functions         | Unwraps `React.memo`, `memo()` calls         | Tracks the underlying component |
+
+### Import Resolution
+
+**Supported:**
+
+- Static ES imports: `import { foo } from './foo'`
+- Dynamic lazy imports: `lazy(() => import('./Component'))`
+- Re-exports through aliases
+
+**Not Supported:**
+
+- Template literal dynamic imports: `` import(`./${name}`) ``
+- Require statements: `require('./foo')` (common JS)
+
+### Special React Patterns
+
+The analyzer has specific handling for:
+
+1. **React.memo() / memo()**
+
+   - Detects wrapped components
+   - Links memoized component to original
+   - File: `src/analyzer.ts` (lines 227-237)
+
+2. **lazy() / React.lazy()**
+
+   - Resolves lazy-loaded module paths
+   - Creates caller relationships to all exports from target module
+   - File: `src/analyzer.ts` (lines 36-85, 487-537)
+
+3. **Component Aliases**
+
+   - Tracks `const Widget = SomeComponent` patterns
+   - Resolves through the alias chain
+   - File: `src/analyzer.ts` (lines 239-307)
+
+4. **Callbacks (useMemo, useEffect, etc.)**
+   - Traces callbacks passed to hooks back to parent component
+   - Uses `callbackParents` Map to track ownership
+   - File: `src/analyzer.ts` (lines 145, 461-476)
+
+### State Management Patterns
+
+**Zustand Stores:**
+
+```typescript
+const useStore = create<Store>((set, get) => ({
+  // These are now tracked as separate functions:
+  setTab: (id, data) => {
+    // ← Detected as "setTab"
+    set({ tab: data });
+  },
+  removeTab: (id) => {
+    // ← Detected as "removeTab"
+    set({ tabs: [] });
+  },
+}));
+```
+
+Each property with a function value is tracked separately. This allows granular impact analysis when only one store action is modified.
 
 ## Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| Language | TypeScript 5.9+ |
-| Runtime | Node.js 18+ |
-| Package Manager | pnpm 10.11.0 |
-| Build Tool | TypeScript Compiler (tsc) + esbuild |
-| CLI Framework | Commander.js |
-| Release Management | Changesets |
+| Component          | Technology                          |
+| ------------------ | ----------------------------------- |
+| Language           | TypeScript 5.9+                     |
+| Runtime            | Node.js 18+                         |
+| Package Manager    | pnpm 10.11.0                        |
+| Build Tool         | TypeScript Compiler (tsc) + esbuild |
+| CLI Framework      | Commander.js                        |
+| Release Management | Changesets                          |
 
 ## Project Structure
 
@@ -129,11 +217,13 @@ pnpm dev      # Watch mode
 ### Module Breakdown
 
 #### 1. `src/index.ts` - CLI Entry Point
+
 - Sets up Commander.js CLI
 - Orchestrates the analysis pipeline
 - Handles progress indicators (spinner)
 
 **Options:**
+
 - `--depth <number>`: Maximum analysis depth
 - `--tsconfig <path>`: Custom tsconfig path
 - `--output <file>`: Save report to file (default: temp file for HTML)
@@ -141,22 +231,49 @@ pnpm dev      # Watch mode
 - `--no-open`: Disable auto-opening browser for HTML format
 
 #### 2. `src/git.ts` - Git Integration
+
 - `getGitDiff()`: Runs `git diff -U0 HEAD`
 - `parseGitDiff()`: Extracts changed line numbers per file
 
 #### 3. `src/analyzer.ts` - Core Analysis
+
 - `createTsProgram()`: Creates TS compiler program
 - `buildCallGraph()`: Builds function call graph using TS AST
 - `findChangedFunctions()`: Identifies functions in changed line ranges
 
 **Key Data Structure:**
+
 ```typescript
 type CallGraph = Map<string, FunctionInfo>;
-// "filepath:funcName" -> { callers: CallSite[], definition: { startLine, endLine } }
+// "filepath:funcName" -> {
+//   callers: CallSite[],
+//   definition: { startLine: number, endLine: number },
+//   lazyImports?: LazyImport[]
+// }
 ```
 
+**CallGraph Construction Process:**
+
+1. **Two-Pass Analysis**
+
+   - **Pass 1**: Traverse all source files, identify function declarations and calls
+   - **Pass 2**: Resolve lazy imports by matching resolved module paths to functions
+
+2. **Caller Resolution**
+
+   - Uses TypeScript's `TypeChecker.getSymbolAtLocation()` to resolve identifiers to declarations
+   - Handles aliased symbols (re-exports) via `getAliasedSymbol()`
+   - Falls back to name-based matching for certain patterns
+
+3. **Circular Reference Handling**
+   - All tree-walking functions use `visited` Set to track seen nodes
+   - Prevents infinite recursion in circular dependency scenarios
+   - Example fix: `hasCallerRelationship()` in `format-html/index.ts`
+
 #### 4. `src/formatter.ts` - Formatter Entry Point
+
 Thin wrapper that delegates to format plugins:
+
 - Auto-registers built-in plugins (markdown, html)
 - `generateReport()`: Routes to appropriate plugin
 - Maintains backward compatibility with old API
@@ -164,12 +281,14 @@ Thin wrapper that delegates to format plugins:
 #### 5. `src/plugin/` - Plugin System
 
 **Plugin Registry (`src/plugin/registry.ts`):**
+
 - `register(plugin)`: Register a new format plugin
 - `get(name)`: Get plugin by name
 - `has(name)`: Check if plugin is registered
 - `getAvailableFormats()`: List all registered format names
 
 **Shared Utilities (`src/plugin/shared/`):**
+
 - `calculateImpactScore()`: Calculate impact based on breadth and depth
 - `getImpactLevel()`: Convert score to impact level (critical/high/medium/low/none)
 - `getImpactLabel()`: Get display label with emoji
@@ -180,6 +299,7 @@ Thin wrapper that delegates to format plugins:
 #### 6. `src/plugin/format-html/` - HTML Format Plugin
 
 **Key Features:**
+
 - **Modern Premium Design**: Black/green cyberpunk aesthetic with Inter + JetBrains Mono fonts
 - **Function Grouping**: Automatically groups related functions from the same file with overlapping impact graphs
 - **Interactive Tree View**: Collapsible hierarchy with shared reference detection and navigation
@@ -193,29 +313,40 @@ Thin wrapper that delegates to format plugins:
 
 **Function Grouping Logic:**
 Functions are grouped when they:
+
 - Are in the same file AND
 - Have caller/callee relationship OR share >70% overlap in dependents
 
 This prevents duplicate visualizations when multiple functions in one file affect the same dependency graph.
 
 #### 7. `src/plugin/index.ts` - Plugin Exports
+
 Central export point for plugin system:
+
 - Re-exports all plugin types
 - Re-exports shared utilities
 - Exports built-in plugin instances (`markdownFormatPlugin`, `htmlFormatPlugin`)
 
 #### 7. `src/types.ts` - Type Definitions
+
 Core interfaces for the application:
+
 ```typescript
-interface CallSite { callerId: string; line: number; }
-interface LazyImport { moduleSpecifier: string; line: number; }
-interface FunctionInfo { 
-  callers: CallSite[]; 
+interface CallSite {
+  callerId: string;
+  line: number;
+}
+interface LazyImport {
+  moduleSpecifier: string;
+  line: number;
+}
+interface FunctionInfo {
+  callers: CallSite[];
   definition: { startLine: number; endLine: number };
   lazyImports?: LazyImport[];
 }
 type CallGraph = Map<string, FunctionInfo>;
-type OutputFormat = 'markdown' | 'html';
+type OutputFormat = "markdown" | "html";
 ```
 
 ## Development Conventions
@@ -247,32 +378,35 @@ Functions identified as: `relative/path/to/file.ts:functionName`
 To add a new format (e.g., JSON):
 
 1. **Create plugin directory:**
+
    ```
    src/plugin/format-json/
    └── index.ts
    ```
 
 2. **Implement the plugin:**
+
    ```typescript
-   import type { AnalysisResult } from '../../types.js';
-   import type { FormatPlugin } from '../types.js';
-   
+   import type { AnalysisResult } from "../../types.js";
+   import type { FormatPlugin } from "../types.js";
+
    export class JsonFormatPlugin implements FormatPlugin {
-     readonly name = 'json';
-     readonly extension = 'json';
-     readonly contentType = 'application/json';
-     
+     readonly name = "json";
+     readonly extension = "json";
+     readonly contentType = "application/json";
+
      generate(result: AnalysisResult, maxDepth: number | null): string {
        return JSON.stringify(result, null, 2);
      }
    }
-   
+
    export const jsonFormatPlugin = new JsonFormatPlugin();
    ```
 
 3. **Register in `src/formatter.ts`:**
+
    ```typescript
-   import { jsonFormatPlugin } from './plugin/format-json/index.js';
+   import { jsonFormatPlugin } from "./plugin/format-json/index.js";
    registerPlugin(jsonFormatPlugin);
    ```
 
@@ -297,10 +431,12 @@ To add a new format (e.g., JSON):
 ## Dependencies
 
 ### Production
+
 - `commander`: CLI argument parsing
 - `typescript`: TypeScript compiler (bundled)
 
 ### Development
+
 - `typescript`: TypeScript compiler
 - `esbuild`: Bundler for CLI single-file output
 - `@changesets/cli`: Version management
@@ -329,6 +465,36 @@ To add a new format (e.g., JSON):
 3. Run `pnpm build`
 4. Test manually with `pnpm depwalker`
 
+## Edge Cases & Known Behaviors
+
+### What Gets Tracked
+
+| Scenario                       | Behavior                                | Rationale                         |
+| ------------------------------ | --------------------------------------- | --------------------------------- |
+| Function with no callers       | Shows "No Impact" (⚪)                  | Safe change, no ripple effects    |
+| Circular dependency A→B→A      | Stops at cycle, marks circular          | Prevents infinite loops           |
+| Function called in 100+ places | Shows "Critical" (🔴) with high score   | High breadth = high risk          |
+| Deep call chain (15+ levels)   | Shows "Critical" (🔴) with depth factor | Deep impact = systemic risk       |
+| JSX in map/filter              | Each occurrence tracked separately      | Accurate line numbers for changes |
+
+### Performance Edge Cases
+
+| Scenario                          | Impact              | Mitigation                              |
+| --------------------------------- | ------------------- | --------------------------------------- |
+| 10,000+ functions                 | ~10s analysis time  | Efficient Set-based visited tracking    |
+| 100+ entry points from one change | Large report size   | Depth limiting with `--depth` flag      |
+| Complex circular dependencies     | Stack overflow risk | All recursive functions track visited   |
+| Large monorepo with many files    | Memory usage        | Only analyzes files in tsconfig include |
+
+### Common Misidentifications
+
+The analyzer may occasionally:
+
+- Miss calls through complex dynamic patterns
+- Over-count when same function is called multiple times from one caller (shows as multiple call sites)
+- Not distinguish between different overloads of same function name
+- Include type-only imports in file dependency graph (cosmetic only)
+
 ---
 
-*This document should be updated when project structure or conventions change.*
+_This document should be updated when project structure or conventions change._

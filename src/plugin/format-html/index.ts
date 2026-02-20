@@ -5,8 +5,10 @@ import type { FormatPlugin } from '../types.js';
 import {
   buildImpactedItems,
   calculateStats,
+  collectAllDependents,
   type ImpactedItem,
 } from '../shared/utils.js';
+import { OVERLAP_THRESHOLD } from '../../constants.js';
 import { buildTreeData, collectEntryPoints, type EntryPoint } from '../shared/tree-builder.js';
 import type { FunctionGroup } from './types.js';
 import { styles } from './styles.js';
@@ -104,11 +106,11 @@ export class HtmlFormatPlugin implements FormatPlugin {
         const itemCallsOther = this.hasCallerRelationship(item.funcId, other.funcId, callGraph);
         const otherCallsItem = this.hasCallerRelationship(other.funcId, item.funcId, callGraph);
         
-        // Check if they share significant overlap in dependents (>70%)
-        const itemDependents = this.collectAllDependents(item.funcId, callGraph);
-        const otherDependents = this.collectAllDependents(other.funcId, callGraph);
+        // Check if they share significant overlap in dependents
+        const itemDependents = new Set(collectAllDependents(item.funcId, callGraph));
+        const otherDependents = new Set(collectAllDependents(other.funcId, callGraph));
         const overlap = this.calculateOverlap(itemDependents, otherDependents);
-        const significantOverlap = overlap > 0.7;
+        const significantOverlap = overlap > OVERLAP_THRESHOLD;
 
         if (sameFile && (itemCallsOther || otherCallsItem || significantOverlap)) {
           related.push(other);
@@ -127,25 +129,13 @@ export class HtmlFormatPlugin implements FormatPlugin {
     return groups;
   }
 
-  private hasCallerRelationship(caller: string, callee: string, callGraph: CallGraph): boolean {
+  private hasCallerRelationship(caller: string, callee: string, callGraph: CallGraph, visited = new Set<string>()): boolean {
+    if (visited.has(caller)) return false;
+    visited.add(caller);
     const info = callGraph.get(caller);
     if (!info) return false;
-    return info.callers.some(c => c.callerId === callee) || 
-           info.callers.some(c => this.hasCallerRelationship(c.callerId, callee, callGraph));
-  }
-
-  private collectAllDependents(funcId: string, callGraph: CallGraph, visited = new Set<string>()): Set<string> {
-    if (visited.has(funcId)) return visited;
-    visited.add(funcId);
-    
-    const info = callGraph.get(funcId);
-    if (info) {
-      for (const caller of info.callers) {
-        this.collectAllDependents(caller.callerId, callGraph, visited);
-      }
-    }
-    
-    return visited;
+    return info.callers.some(c => c.callerId === callee) ||
+           info.callers.some(c => this.hasCallerRelationship(c.callerId, callee, callGraph, visited));
   }
 
   private calculateOverlap(setA: Set<string>, setB: Set<string>): number {
