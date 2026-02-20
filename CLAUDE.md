@@ -46,9 +46,9 @@ DepWalker is a TypeScript dependency analysis CLI tool that tracks the impact of
          │  Markdown Plugin    │    │    HTML Plugin      │
          │(format-markdown/)   │    │   (format-html/)    │
          │                     │    │                     │
-         │ • Tables & lists    │    │ • Interactive tree  │
-         │ • Impact scores     │    │ • Radial graph viz  │
-         │ • Static output     │    │ • Function grouping │
+         │ • Compact tables    │    │ • Single-page view  │
+         │ • Inline summary    │    │ • Collapsible trees │
+         │ • Entry points list │    │ • Entry points tbl  │
          └─────────────────────┘    └─────────────────────┘
 ```
 
@@ -175,6 +175,8 @@ depwalker/
 │   ├── git.ts               # Git diff parsing
 │   ├── analyzer.ts          # Core analysis logic (AST analysis, call graph)
 │   ├── formatter.ts         # Formatter entry point (plugin orchestration)
+│   ├── spinner.ts           # CLI spinner/progress indicator
+│   ├── constants.ts         # Shared constants (thresholds, weights)
 │   ├── types.ts             # TypeScript interfaces
 │   └── plugin/              # Format plugin system
 │       ├── types.ts         # Plugin interface definitions
@@ -185,8 +187,12 @@ depwalker/
 │       │   └── tree-builder.ts  # Tree building and entry point collection
 │       ├── format-markdown/ # Markdown format plugin
 │       │   └── index.ts
-│       └── format-html/     # HTML format plugin (modern premium design)
-│           └── index.ts
+│       └── format-html/     # HTML format plugin (single-page static)
+│           ├── index.ts     # Plugin class
+│           ├── types.ts     # Type imports
+│           ├── styles.ts    # Minimal clean CSS
+│           ├── templates.ts # HTML rendering (tree, nodes, entry points)
+│           └── scripts.ts   # Minimal JS (tree collapse/expand)
 ├── scripts/                  # Build scripts
 │   └── build.js             # esbuild bundler with version injection
 ├── dist/                     # Compiled & bundled output
@@ -268,7 +274,6 @@ type CallGraph = Map<string, FunctionInfo>;
 3. **Circular Reference Handling**
    - All tree-walking functions use `visited` Set to track seen nodes
    - Prevents infinite recursion in circular dependency scenarios
-   - Example fix: `hasCallerRelationship()` in `format-html/index.ts`
 
 #### 4. `src/formatter.ts` - Formatter Entry Point
 
@@ -298,26 +303,22 @@ Thin wrapper that delegates to format plugins:
 
 #### 6. `src/plugin/format-html/` - HTML Format Plugin
 
+Single-page static HTML report with minimal design. All content is server-rendered — no client-side data fetching or complex interactions.
+
+**Files:**
+
+- `index.ts` — Plugin class, builds data and delegates to templates
+- `types.ts` — Type imports
+- `styles.ts` — Clean light-theme CSS (~250 lines), system font stack, no external fonts
+- `templates.ts` — HTML rendering: tree nodes, changed nodes cards, entry points table, full page layout
+- `scripts.ts` — Minimal JS (~15 lines): tree collapse/expand only
+
 **Key Features:**
 
-- **Modern Premium Design**: Black/green cyberpunk aesthetic with Inter + JetBrains Mono fonts
-- **Function Grouping**: Automatically groups related functions from the same file with overlapping impact graphs
-- **Interactive Tree View**: Collapsible hierarchy with shared reference detection and navigation
-- **Interactive Graph View**: Radial SVG visualization with:
-  - Zoom/pan controls
-  - Fullscreen mode (F key shortcut)
-  - Layer filtering
-  - Convergence handling (curved edges for multiple incoming paths)
-  - Node selection with connection highlighting
-- **Entry Points Panel**: Shows test targets grouped by file with priority indicators
-
-**Function Grouping Logic:**
-Functions are grouped when they:
-
-- Are in the same file AND
-- Have caller/callee relationship OR share >70% overlap in dependents
-
-This prevents duplicate visualizations when multiple functions in one file affect the same dependency graph.
+- **Single-page layout**: All changed nodes with inline dependency trees, visible without clicking
+- **Collapsible tree view**: Each changed node shows its callers as a collapsible tree
+- **Impact badges**: Color-coded score badges per node
+- **Entry points table**: Shows test targets with depth and priority
 
 #### 7. `src/plugin/index.ts` - Plugin Exports
 
@@ -327,7 +328,7 @@ Central export point for plugin system:
 - Re-exports shared utilities
 - Exports built-in plugin instances (`markdownFormatPlugin`, `htmlFormatPlugin`)
 
-#### 7. `src/types.ts` - Type Definitions
+#### 8. `src/types.ts` - Type Definitions
 
 Core interfaces for the application:
 
@@ -340,9 +341,12 @@ interface LazyImport {
   moduleSpecifier: string;
   line: number;
 }
+type NodeKind = 'function' | 'method' | 'constructor' | 'accessor'
+  | 'class-property' | 'class' | 'variable' | 'enum';
 interface FunctionInfo {
   callers: CallSite[];
   definition: { startLine: number; endLine: number };
+  kind?: NodeKind;
   lazyImports?: LazyImport[];
 }
 type CallGraph = Map<string, FunctionInfo>;

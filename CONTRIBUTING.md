@@ -144,8 +144,8 @@ depwalker/
 │       ├── shared/           # Shared utilities
 │       │   ├── utils.ts      # Impact calculations
 │       │   └── tree-builder.ts
-│       ├── format-markdown/  # Markdown plugin
-│       └── format-html/      # HTML plugin
+│       ├── format-markdown/  # Markdown plugin (compact tables + entry points)
+│       └── format-html/      # HTML plugin (single-page static report)
 ├── dist/                     # Compiled output
 ├── .changeset/               # Changeset files
 └── .github/workflows/        # CI/CD

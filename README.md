@@ -14,7 +14,7 @@ A TypeScript dependency analysis tool that tracks the impact of code changes. De
 - **Pre-commit Review**: See the scope of impact before committing changes
 - **Test Planning**: Identify which parts need testing after modifications
 - **Refactoring Safety**: Verify dependencies when refactoring shared code
-- **Code Review**: Share impact analysis as Markdown or interactive HTML with your team
+- **Code Review**: Share impact analysis as Markdown or HTML with your team
 
 ## 🧠 How It Works
 
@@ -84,47 +84,26 @@ npx depwalker@latest --output impact-report.md
 ### Example Output
 
 ```markdown
-# Dependency Impact Analysis
+# Impact Analysis
 
-## Summary
+**2 files changed · 5 nodes**
+🟠 1 high · 🟡 2 medium · 🟢 1 low · ⚪ 1 none
 
-| Metric                      | Value |
-| --------------------------- | ----- |
-| Changed Files               | 2     |
-| Changed Functions           | 5     |
-| 🔴 Critical Impact (20+)    | 0     |
-| 🟠 High Impact (10-19)      | 1     |
-| 🟡 Medium Impact (4-9)      | 2     |
-| 🟢 Low Impact (1-3)         | 1     |
-| ⚪ No Impact                | 1     |
+## Changed Nodes
 
-## Changed Files
+| Node            | File                       | Impact | Dependents | Depth |
+| --------------- | -------------------------- | ------ | ---------- | ----- |
+| **handleClick** | `src/components/Button.tsx:23` | 🟠 12  | 8          | 2     |
+| **formatDate**  | `src/utils/helpers.ts:10`  | 🟡 6   | 4          | 1     |
 
-- `src/utils/helpers.ts`
-- `src/components/Button.tsx`
+## Entry Points
 
-## Most Impacted Changes
+| Entry Point | File                            | Depth    |
+| ----------- | ------------------------------- | -------- |
+| `App`       | `src/App.tsx:5`                 | 3 levels |
+| `main`      | `src/index.ts:1`               | direct   |
 
-| Function        | File                        | Score | Dependents | Depth |
-| --------------- | --------------------------- | ----- | ---------- | ----- |
-| **handleClick** | `src/components/Button.tsx` | 🟠 12 | 8          | 2     |
-| **formatDate**  | `src/utils/helpers.ts`      | 🟡 6  | 4          | 1     |
-
-## Detailed Impact
-
-### src/components/Button.tsx
-
-#### `handleClick`
-
-- **Location**: `src/components/Button.tsx:23`
-- **Impact Score**: 12 (8 dependents × depth factor)
-- **Max Chain Depth**: 2 levels
-- **Impact**: 🟠 High
-
-**Impact Chain:**
-
-- **SubmitForm** (`src/forms/SubmitForm.tsx:45`)
-  - **ModalDialog** (`src/dialogs/ModalDialog.tsx:12`)
+2 entry points to test
 ```
 
 ## 🔧 Options
@@ -139,15 +118,8 @@ npx depwalker@latest --output impact-report.md
 
 ### Output Formats
 
-- **markdown** (default): Clean, structured report perfect for sharing with AI assistants or documentation
-- **html**: Interactive web visualization with:
-  - **Tree View**: Collapsible hierarchy with shared reference detection
-  - **Graph View**: Radial node diagram with zoom/pan, fullscreen mode, and layer filtering
-  - **Function Grouping**: Automatically groups related functions from the same file
-  - **Entry Points**: Shows test targets with priority indicators
-  - **Search and Filters**: Find functions by name or filter by impact level
-  
-  Best for exploring complex dependency graphs. **Automatically opens in browser** (use `--no-open` to disable).
+- **markdown** (default): Compact, scannable report with a changed nodes table and entry points list. Great for sharing with AI assistants or pasting into PRs.
+- **html**: Single-page static report with collapsible dependency trees per changed node, impact badges, and an entry points table. Everything visible on one page — no clicking required. **Automatically opens in browser** (use `--no-open` to disable).
 
 ### Limitations
 
