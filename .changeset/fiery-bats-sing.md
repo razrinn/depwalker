@@ -1,5 +1,0 @@
----
-"depwalker": minor
----
-
-simplify output

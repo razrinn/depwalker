@@ -1,5 +1,12 @@
 # depwalker
 
+## 0.5.0
+
+### Minor Changes
+
+- c450ad0: simplify output
+- 12ee492: refactor code
+
 ## 0.4.2
 
 ### Patch Changes
