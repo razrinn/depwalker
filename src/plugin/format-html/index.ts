@@ -31,12 +31,13 @@ export class HtmlFormatPlugin implements FormatPlugin {
       treeLookup.set(item.funcId, buildTreeData(item.funcId, callGraph, maxDepth));
     }
 
-    // Collect all test targets, then refine (push down from overly-broad roots)
+    // Collect all test targets, then deduplicate and filter out changed functions
     const allTargets: TestTarget[] = [];
     for (const item of impactedItems) {
       allTargets.push(...collectEntryPoints(item.funcId, callGraph, maxDepth));
     }
-    const testTargets = refineTestTargets(allTargets, callGraph);
+    const changedFuncIds = new Set(impactedItems.map(item => item.funcId));
+    const testTargets = refineTestTargets(allTargets, changedFuncIds);
 
     const VERSION = process.env.PKG_VERSION || '0.0.0';
 

@@ -134,74 +134,27 @@ export function collectEntryPoints(
 }
 
 /**
- * Refine test targets by pushing down from overly-broad roots.
+ * Deduplicate test targets, filter out changed functions, and sort by depth.
  *
- * If the same root (e.g. `App`) is reached by multiple changed functions,
- * it's too broad to be a useful test target. Instead, use the nodes one level
- * below it — these are typically page-level components or feature handlers.
- *
- * Repeats until no target has multiple convergent paths (handles chains like
- * App → Router → pages).
+ * The BFS roots from collectEntryPoints() are already the correct test targets
+ * (functions with no callers). This function merges duplicates (keeping shortest
+ * path), removes any target that is itself a changed function (already shown in
+ * Changed Nodes), and sorts by depth ascending (closest = highest priority).
  *
  * @param allTargets - Raw targets from all collectEntryPoints() calls (before dedup)
- * @param callGraph - The full call graph for node lookups
- * @returns Deduplicated, refined, sorted test targets
+ * @param changedFuncIds - IDs of changed functions to exclude from targets
+ * @returns Deduplicated, filtered, sorted test targets
  */
 export function refineTestTargets(
   allTargets: TestTarget[],
-  callGraph: CallGraph,
+  changedFuncIds: Set<string>,
 ): TestTarget[] {
-  let targets = allTargets;
-
-  // Iteratively push down from convergent roots
-  for (let i = 0; i < 10; i++) {
-    const groups = new Map<string, TestTarget[]>();
-    for (const t of targets) {
-      if (!groups.has(t.id)) groups.set(t.id, []);
-      groups.get(t.id)!.push(t);
-    }
-
-    let changed = false;
-    const next: TestTarget[] = [];
-
-    for (const [, group] of groups) {
-      // Multiple paths converge on this target — it's too broad
-      if (group.length > 1) {
-        for (const t of group) {
-          if (t.path.length >= 3) {
-            // Push down: replace root with the node one level below it
-            const penultimateId = t.path[t.path.length - 2]!;
-            const node = callGraph.get(penultimateId);
-            if (node) {
-              const parts = penultimateId.split(':');
-              next.push({
-                id: penultimateId,
-                name: parts[1] || 'unknown',
-                file: parts[0] || 'unknown',
-                line: node.definition.startLine,
-                depth: t.depth - 1,
-                path: t.path.slice(0, -1),
-                covers: [...t.covers],
-              });
-              changed = true;
-              continue;
-            }
-          }
-          // Can't push down (path too short or node missing) — keep as is
-          next.push(t);
-        }
-      } else {
-        next.push(...group);
-      }
-    }
-
-    targets = next;
-    if (!changed) break;
-  }
-
-  // Final dedup: merge covers, keep shortest path
+  // Dedup: merge covers, keep shortest path
   const unique = new Map<string, TestTarget>();
-  for (const t of targets) {
+  for (const t of allTargets) {
+    // Filter out targets that are themselves changed functions
+    if (changedFuncIds.has(t.id)) continue;
+
     const existing = unique.get(t.id);
     if (!existing) {
       unique.set(t.id, { ...t, covers: [...t.covers] });

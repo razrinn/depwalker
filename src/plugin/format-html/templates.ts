@@ -69,22 +69,23 @@ export function renderChangedNodes(
     return '<p class="no-deps">No changed functions detected.</p>';
   }
 
-  return items.map(item => {
+  const withDeps = items.filter(i => i.dependents > 0);
+  const noDeps = items.filter(i => i.dependents === 0);
+
+  let html = withDeps.map(item => {
     const impactEmoji = item.impactLevel === 'critical' ? '🔴' :
       item.impactLevel === 'high' ? '🟠' :
         item.impactLevel === 'medium' ? '🟡' :
           item.impactLevel === 'low' ? '🟢' : '⚪';
 
     const treeNode = treeLookup.get(item.funcId);
-    let treeHtml: string;
+    let treeHtml = '';
 
     if (treeNode && treeNode.children.length > 0) {
       const treeContent = treeNode.children
         .map(child => renderTreeNode(child))
         .join('');
       treeHtml = `<div class="tree">${treeContent}</div>`;
-    } else {
-      treeHtml = '<div class="no-deps">No dependents — safe to change</div>';
     }
 
     return `<div class="node-card">
@@ -96,6 +97,13 @@ export function renderChangedNodes(
       ${treeHtml}
     </div>`;
   }).join('');
+
+  if (noDeps.length > 0) {
+    const names = noDeps.map(i => `<code>${escapeHtml(i.name)}</code>`).join(', ');
+    html += `<div class="no-deps">⚪ ${noDeps.length} node${noDeps.length > 1 ? 's' : ''} with no dependents: ${names}</div>`;
+  }
+
+  return html;
 }
 
 /**
@@ -110,7 +118,7 @@ export function renderTestTargets(targets: TestTarget[]): string {
     // Lower depth = closer to change = higher priority
     const priority = t.depth <= TEST_PRIORITY_THRESHOLDS.high ? '🔴 High' :
       t.depth <= TEST_PRIORITY_THRESHOLDS.medium ? '🟡 Medium' : '🟢 Low';
-    const depthLabel = `${t.depth} level${t.depth > 1 ? 's' : ''}`;
+    const depthLabel = t.depth === 1 ? 'direct' : `${t.depth} levels`;
     const coversNames = t.covers.map(c => escapeHtml(c.split(':')[1] || c));
     const coversHtml = coversNames.map(n => `<code>${n}</code>`).join(' ');
 
